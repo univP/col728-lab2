@@ -46,22 +46,22 @@ ast_program::ast_program(List<ast_external_declaration>* external_declarations)
 |   Section 3 : Symbol definitions for stringtab.h  |
 `--------------------------------------------------*/
 
-Entry::Entry(int index, char* value): index(index), value(value) {}
+Entry::Entry(int index, std::string str): index(index), str(str) {}
 
 int Entry::get_index() { return index; }
 
-char* Entry::get_value() { return value; }
+std::string Entry::get_str() { return str; }
 
 Table::Table(): table(NULL), len(0) {}
 
-Symbol Table::add_string(char* value) {
+Symbol Table::add_string(std::string str) {
     for (List<Entry>* l = table; l; l = l->get_tail()) {
-        if (strcmp(l->get_head()->get_value(), value) == 0) {
+        if (l->get_head()->get_str() == str) {
             return l->get_head();
         }
     }
 
-    Symbol symbol = new Entry(len++, value);
+    Symbol symbol = new Entry(len++, str);
     table = new List<Entry>(symbol, table);
     return symbol;
 }

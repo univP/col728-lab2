@@ -811,7 +811,13 @@ extern int sym_type(const char *);  /* returns type from symbol table */
 static void comment(void);
 static int check_type(void);
 #define YY_DECL extern "C" int yylex()
-#line 815 "c.lex.cpp"
+
+// Define string tables.
+#include "table.h"
+Table idTable;
+Table strTable;
+Table intTable;
+#line 821 "c.lex.cpp"
 
 #define INITIAL 0
 
@@ -1029,9 +1035,9 @@ YY_DECL
 		}
 
 	{
-#line 39 "c.l"
+#line 45 "c.l"
 
-#line 1035 "c.lex.cpp"
+#line 1041 "c.lex.cpp"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -1100,547 +1106,547 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 40 "c.l"
+#line 46 "c.l"
 { comment(); }
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 41 "c.l"
+#line 47 "c.l"
 { /* consume //-comment */ }
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 43 "c.l"
+#line 49 "c.l"
 { return(AUTO); }
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 44 "c.l"
+#line 50 "c.l"
 { return(BREAK); }
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 45 "c.l"
+#line 51 "c.l"
 { return(CASE); }
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 46 "c.l"
+#line 52 "c.l"
 { return(CHAR); }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 47 "c.l"
+#line 53 "c.l"
 { return(CONST); }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 48 "c.l"
+#line 54 "c.l"
 { return(CONTINUE); }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 49 "c.l"
+#line 55 "c.l"
 { return(DEFAULT); }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 50 "c.l"
+#line 56 "c.l"
 { return(DO); }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 51 "c.l"
+#line 57 "c.l"
 { return(DOUBLE); }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 52 "c.l"
+#line 58 "c.l"
 { return(ELSE); }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 53 "c.l"
+#line 59 "c.l"
 { return(ENUM); }
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 54 "c.l"
+#line 60 "c.l"
 { return(EXTERN); }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 55 "c.l"
+#line 61 "c.l"
 { return(FLOAT); }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 56 "c.l"
+#line 62 "c.l"
 { return(FOR); }
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 57 "c.l"
+#line 63 "c.l"
 { return(GOTO); }
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 58 "c.l"
+#line 64 "c.l"
 { return(IF); }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 59 "c.l"
+#line 65 "c.l"
 { return(INLINE); }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 60 "c.l"
+#line 66 "c.l"
 { return(INT); }
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 61 "c.l"
+#line 67 "c.l"
 { return(LONG); }
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 62 "c.l"
+#line 68 "c.l"
 { return(REGISTER); }
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 63 "c.l"
+#line 69 "c.l"
 { return(RESTRICT); }
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 64 "c.l"
+#line 70 "c.l"
 { return(RETURN); }
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 65 "c.l"
+#line 71 "c.l"
 { return(SHORT); }
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 66 "c.l"
+#line 72 "c.l"
 { return(SIGNED); }
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 67 "c.l"
+#line 73 "c.l"
 { return(SIZEOF); }
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 68 "c.l"
+#line 74 "c.l"
 { return(STATIC); }
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 69 "c.l"
+#line 75 "c.l"
 { return(STRUCT); }
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 70 "c.l"
+#line 76 "c.l"
 { return(SWITCH); }
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 71 "c.l"
+#line 77 "c.l"
 { return(TYPEDEF); }
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 72 "c.l"
+#line 78 "c.l"
 { return(UNION); }
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-#line 73 "c.l"
+#line 79 "c.l"
 { return(UNSIGNED); }
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
-#line 74 "c.l"
+#line 80 "c.l"
 { return(VOID); }
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 75 "c.l"
+#line 81 "c.l"
 { return(VOLATILE); }
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 76 "c.l"
+#line 82 "c.l"
 { return(WHILE); }
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 77 "c.l"
+#line 83 "c.l"
 { return ALIGNAS; }
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
-#line 78 "c.l"
+#line 84 "c.l"
 { return ALIGNOF; }
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 79 "c.l"
+#line 85 "c.l"
 { return ATOMIC; }
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
-#line 80 "c.l"
+#line 86 "c.l"
 { return BOOL; }
 	YY_BREAK
 case 41:
 YY_RULE_SETUP
-#line 81 "c.l"
+#line 87 "c.l"
 { return COMPLEX; }
 	YY_BREAK
 case 42:
 YY_RULE_SETUP
-#line 82 "c.l"
+#line 88 "c.l"
 { return GENERIC; }
 	YY_BREAK
 case 43:
 YY_RULE_SETUP
-#line 83 "c.l"
+#line 89 "c.l"
 { return IMAGINARY; }
 	YY_BREAK
 case 44:
 YY_RULE_SETUP
-#line 84 "c.l"
+#line 90 "c.l"
 { return NORETURN; }
 	YY_BREAK
 case 45:
 YY_RULE_SETUP
-#line 85 "c.l"
+#line 91 "c.l"
 { return STATIC_ASSERT; }
 	YY_BREAK
 case 46:
 YY_RULE_SETUP
-#line 86 "c.l"
+#line 92 "c.l"
 { return THREAD_LOCAL; }
 	YY_BREAK
 case 47:
 YY_RULE_SETUP
-#line 87 "c.l"
+#line 93 "c.l"
 { return FUNC_NAME; }
 	YY_BREAK
 case 48:
 YY_RULE_SETUP
-#line 89 "c.l"
+#line 95 "c.l"
 { return check_type(); }
 	YY_BREAK
 case 49:
 YY_RULE_SETUP
-#line 91 "c.l"
+#line 97 "c.l"
 { return I_CONSTANT; }
 	YY_BREAK
 case 50:
 YY_RULE_SETUP
-#line 92 "c.l"
+#line 98 "c.l"
 { return I_CONSTANT; }
 	YY_BREAK
 case 51:
 YY_RULE_SETUP
-#line 93 "c.l"
+#line 99 "c.l"
 { return I_CONSTANT; }
 	YY_BREAK
 case 52:
 YY_RULE_SETUP
-#line 94 "c.l"
+#line 100 "c.l"
 { return I_CONSTANT; }
 	YY_BREAK
 case 53:
 YY_RULE_SETUP
-#line 96 "c.l"
+#line 102 "c.l"
 { return F_CONSTANT; }
 	YY_BREAK
 case 54:
 YY_RULE_SETUP
-#line 97 "c.l"
+#line 103 "c.l"
 { return F_CONSTANT; }
 	YY_BREAK
 case 55:
 YY_RULE_SETUP
-#line 98 "c.l"
+#line 104 "c.l"
 { return F_CONSTANT; }
 	YY_BREAK
 case 56:
 YY_RULE_SETUP
-#line 99 "c.l"
+#line 105 "c.l"
 { return F_CONSTANT; }
 	YY_BREAK
 case 57:
 YY_RULE_SETUP
-#line 100 "c.l"
+#line 106 "c.l"
 { return F_CONSTANT; }
 	YY_BREAK
 case 58:
 YY_RULE_SETUP
-#line 101 "c.l"
+#line 107 "c.l"
 { return F_CONSTANT; }
 	YY_BREAK
 case 59:
 /* rule 59 can match eol */
 YY_RULE_SETUP
-#line 103 "c.l"
+#line 109 "c.l"
 { return STRING_LITERAL; }
 	YY_BREAK
 case 60:
 YY_RULE_SETUP
-#line 105 "c.l"
+#line 111 "c.l"
 { return ELLIPSIS; }
 	YY_BREAK
 case 61:
 YY_RULE_SETUP
-#line 106 "c.l"
+#line 112 "c.l"
 { return RIGHT_ASSIGN; }
 	YY_BREAK
 case 62:
 YY_RULE_SETUP
-#line 107 "c.l"
+#line 113 "c.l"
 { return LEFT_ASSIGN; }
 	YY_BREAK
 case 63:
 YY_RULE_SETUP
-#line 108 "c.l"
+#line 114 "c.l"
 { return ADD_ASSIGN; }
 	YY_BREAK
 case 64:
 YY_RULE_SETUP
-#line 109 "c.l"
+#line 115 "c.l"
 { return SUB_ASSIGN; }
 	YY_BREAK
 case 65:
 YY_RULE_SETUP
-#line 110 "c.l"
+#line 116 "c.l"
 { return MUL_ASSIGN; }
 	YY_BREAK
 case 66:
 YY_RULE_SETUP
-#line 111 "c.l"
+#line 117 "c.l"
 { return DIV_ASSIGN; }
 	YY_BREAK
 case 67:
 YY_RULE_SETUP
-#line 112 "c.l"
+#line 118 "c.l"
 { return MOD_ASSIGN; }
 	YY_BREAK
 case 68:
 YY_RULE_SETUP
-#line 113 "c.l"
+#line 119 "c.l"
 { return AND_ASSIGN; }
 	YY_BREAK
 case 69:
 YY_RULE_SETUP
-#line 114 "c.l"
+#line 120 "c.l"
 { return XOR_ASSIGN; }
 	YY_BREAK
 case 70:
 YY_RULE_SETUP
-#line 115 "c.l"
+#line 121 "c.l"
 { return OR_ASSIGN; }
 	YY_BREAK
 case 71:
 YY_RULE_SETUP
-#line 116 "c.l"
+#line 122 "c.l"
 { return RIGHT_OP; }
 	YY_BREAK
 case 72:
 YY_RULE_SETUP
-#line 117 "c.l"
+#line 123 "c.l"
 { return LEFT_OP; }
 	YY_BREAK
 case 73:
 YY_RULE_SETUP
-#line 118 "c.l"
+#line 124 "c.l"
 { return INC_OP; }
 	YY_BREAK
 case 74:
 YY_RULE_SETUP
-#line 119 "c.l"
+#line 125 "c.l"
 { return DEC_OP; }
 	YY_BREAK
 case 75:
 YY_RULE_SETUP
-#line 120 "c.l"
+#line 126 "c.l"
 { return PTR_OP; }
 	YY_BREAK
 case 76:
 YY_RULE_SETUP
-#line 121 "c.l"
+#line 127 "c.l"
 { return AND_OP; }
 	YY_BREAK
 case 77:
 YY_RULE_SETUP
-#line 122 "c.l"
+#line 128 "c.l"
 { return OR_OP; }
 	YY_BREAK
 case 78:
 YY_RULE_SETUP
-#line 123 "c.l"
+#line 129 "c.l"
 { return LE_OP; }
 	YY_BREAK
 case 79:
 YY_RULE_SETUP
-#line 124 "c.l"
+#line 130 "c.l"
 { return GE_OP; }
 	YY_BREAK
 case 80:
 YY_RULE_SETUP
-#line 125 "c.l"
+#line 131 "c.l"
 { return EQ_OP; }
 	YY_BREAK
 case 81:
 YY_RULE_SETUP
-#line 126 "c.l"
+#line 132 "c.l"
 { return NE_OP; }
 	YY_BREAK
 case 82:
 YY_RULE_SETUP
-#line 127 "c.l"
+#line 133 "c.l"
 { return ';'; }
 	YY_BREAK
 case 83:
 YY_RULE_SETUP
-#line 128 "c.l"
+#line 134 "c.l"
 { return '{'; }
 	YY_BREAK
 case 84:
 YY_RULE_SETUP
-#line 129 "c.l"
+#line 135 "c.l"
 { return '}'; }
 	YY_BREAK
 case 85:
 YY_RULE_SETUP
-#line 130 "c.l"
+#line 136 "c.l"
 { return ','; }
 	YY_BREAK
 case 86:
 YY_RULE_SETUP
-#line 131 "c.l"
+#line 137 "c.l"
 { return ':'; }
 	YY_BREAK
 case 87:
 YY_RULE_SETUP
-#line 132 "c.l"
+#line 138 "c.l"
 { return '='; }
 	YY_BREAK
 case 88:
 YY_RULE_SETUP
-#line 133 "c.l"
+#line 139 "c.l"
 { return '('; }
 	YY_BREAK
 case 89:
 YY_RULE_SETUP
-#line 134 "c.l"
+#line 140 "c.l"
 { return ')'; }
 	YY_BREAK
 case 90:
 YY_RULE_SETUP
-#line 135 "c.l"
+#line 141 "c.l"
 { return '['; }
 	YY_BREAK
 case 91:
 YY_RULE_SETUP
-#line 136 "c.l"
+#line 142 "c.l"
 { return ']'; }
 	YY_BREAK
 case 92:
 YY_RULE_SETUP
-#line 137 "c.l"
+#line 143 "c.l"
 { return '.'; }
 	YY_BREAK
 case 93:
 YY_RULE_SETUP
-#line 138 "c.l"
+#line 144 "c.l"
 { return '&'; }
 	YY_BREAK
 case 94:
 YY_RULE_SETUP
-#line 139 "c.l"
+#line 145 "c.l"
 { return '!'; }
 	YY_BREAK
 case 95:
 YY_RULE_SETUP
-#line 140 "c.l"
+#line 146 "c.l"
 { return '~'; }
 	YY_BREAK
 case 96:
 YY_RULE_SETUP
-#line 141 "c.l"
+#line 147 "c.l"
 { return '-'; }
 	YY_BREAK
 case 97:
 YY_RULE_SETUP
-#line 142 "c.l"
+#line 148 "c.l"
 { return '+'; }
 	YY_BREAK
 case 98:
 YY_RULE_SETUP
-#line 143 "c.l"
+#line 149 "c.l"
 { return '*'; }
 	YY_BREAK
 case 99:
 YY_RULE_SETUP
-#line 144 "c.l"
+#line 150 "c.l"
 { return '/'; }
 	YY_BREAK
 case 100:
 YY_RULE_SETUP
-#line 145 "c.l"
+#line 151 "c.l"
 { return '%'; }
 	YY_BREAK
 case 101:
 YY_RULE_SETUP
-#line 146 "c.l"
+#line 152 "c.l"
 { return '<'; }
 	YY_BREAK
 case 102:
 YY_RULE_SETUP
-#line 147 "c.l"
+#line 153 "c.l"
 { return '>'; }
 	YY_BREAK
 case 103:
 YY_RULE_SETUP
-#line 148 "c.l"
+#line 154 "c.l"
 { return '^'; }
 	YY_BREAK
 case 104:
 YY_RULE_SETUP
-#line 149 "c.l"
+#line 155 "c.l"
 { return '|'; }
 	YY_BREAK
 case 105:
 YY_RULE_SETUP
-#line 150 "c.l"
+#line 156 "c.l"
 { return '?'; }
 	YY_BREAK
 case 106:
 /* rule 106 can match eol */
 YY_RULE_SETUP
-#line 152 "c.l"
+#line 158 "c.l"
 { /* whitespace separates tokens */ }
 	YY_BREAK
 case 107:
 YY_RULE_SETUP
-#line 153 "c.l"
+#line 159 "c.l"
 { /* discard bad characters */ }
 	YY_BREAK
 case 108:
 YY_RULE_SETUP
-#line 155 "c.l"
+#line 161 "c.l"
 ECHO;
 	YY_BREAK
-#line 1644 "c.lex.cpp"
+#line 1650 "c.lex.cpp"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -2653,7 +2659,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 155 "c.l"
+#line 161 "c.l"
 
 
 

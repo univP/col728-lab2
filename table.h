@@ -6,11 +6,11 @@
 class Entry {
 private:
     int index;
-    char* value;
+    std::string str;
 public:
-    Entry(int index, char* value);
+    Entry(int index, std::string str);
     int get_index();
-    char* get_value();
+    std::string get_str();
 };
 
 typedef Entry* Symbol;
@@ -21,9 +21,13 @@ private:
     int len;
 public:
     Table();
-    Symbol add_string(char* value);
+    Symbol add_string(std::string str);
     List<Entry>* get_table();
     int get_len();
 };
+
+extern Table idTable;
+extern Table strTable;
+extern Table intTable;
 
 #endif

@@ -34,6 +34,12 @@ extern int sym_type(const char *);  /* returns type from symbol table */
 static void comment(void);
 static int check_type(void);
 #define YY_DECL extern "C" int yylex()
+
+// Define string tables.
+#include "table.h"
+Table idTable;
+Table strTable;
+Table intTable;
 %}
 
 %%
