@@ -2,6 +2,7 @@
 #define TREE_H
 
 #include "list.h"
+#include "table.h"
 
 class ast_struct;
 class ast_program;

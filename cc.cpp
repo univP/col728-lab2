@@ -42,8 +42,40 @@ ast_program::ast_program(List<ast_external_declaration>* external_declarations)
         : external_declarations (external_declarations) {}
 
 
+/*--------------------------------------------------.
+|   Section 3 : Symbol definitions for stringtab.h  |
+`--------------------------------------------------*/
+
+Entry::Entry(int index, char* value): index(index), value(value) {}
+
+int Entry::get_index() { return index; }
+
+char* Entry::get_value() { return value; }
+
+Table::Table(): table(NULL), len(0) {}
+
+Symbol Table::add_string(char* value) {
+    for (List<Entry>* l = table; l; l = l->get_tail()) {
+        if (strcmp(l->get_head()->get_value(), value) == 0) {
+            return l->get_head();
+        }
+    }
+
+    Symbol symbol = new Entry(len++, value);
+    table = new List<Entry>(symbol, table);
+    return symbol;
+}
+
+List<Entry>* Table::get_table() {
+    return table;
+}
+
+int Table::get_len() {
+    return len;
+}
+
 /*----------------------------------------------.
-|   Section 3 : Symbol definitions of list.h    |
+|   Section 4 : Symbol definitions of list.h    |
 `----------------------------------------------*/
 
 template <class T>

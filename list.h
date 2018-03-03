@@ -1,6 +1,8 @@
 #ifndef LIST_H
 #define LIST_H
 
+#include "string.h"
+
 // Simple definition of a list.
 template <class T>
 class List {

@@ -1,28 +1,27 @@
-#ifndef SYMTAB_H
-#define SYMTAB_H
+#ifndef TABLE_H
+#define TABLE_H
 
 #include "list.h"
 
 class Entry {
 private:
-    char* value;
     int index;
+    char* value;
 public:
-    Entry(char* value, int index);
-    char* get_string();
+    Entry(int index, char* value);
     int get_index();
+    char* get_value();
 };
 
 typedef Entry* Symbol;
 
-class StringTable {
+class Table {
 private:
     List<Entry>* table;
     int len;
 public:
-    StringTable();
+    Table();
     Symbol add_string(char* value);
-    Symbol add_int(int value);
     List<Entry>* get_table();
     int get_len();
 };
