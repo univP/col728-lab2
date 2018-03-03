@@ -9,6 +9,11 @@ int yyparse();
 extern "C" FILE *yyin;
  
 void yyerror(const char *s);
+
+// Declare the constructed AST root.
+#include "tree.h"
+ast_program* root;
+#define YYSTYPE List<ast_external_declaration>*
 %}
 %token	IDENTIFIER I_CONSTANT F_CONSTANT STRING_LITERAL FUNC_NAME SIZEOF
 %token	PTR_OP INC_OP DEC_OP LEFT_OP RIGHT_OP LE_OP GE_OP EQ_OP NE_OP
@@ -27,8 +32,12 @@ void yyerror(const char *s);
 
 %token	ALIGNAS ALIGNOF ATOMIC GENERIC NORETURN STATIC_ASSERT THREAD_LOCAL
 
-%start translation_unit
+%start program
 %%
+
+program
+	: translation_unit { root = new ast_program($1); }
+	;
 
 primary_expression
 	: IDENTIFIER
