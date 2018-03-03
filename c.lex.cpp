@@ -814,9 +814,9 @@ static int check_type(void);
 
 // Define string tables.
 #include "table.h"
-Table idTable;
-Table strTable;
-Table intTable;
+Table id_table;
+Table str_table;
+Table int_table;
 #line 821 "c.lex.cpp"
 
 #define INITIAL 0
@@ -1342,27 +1342,27 @@ YY_RULE_SETUP
 case 48:
 YY_RULE_SETUP
 #line 95 "c.l"
-{ return check_type(); }
+{ id_table.add_string(yytext); return check_type(); }
 	YY_BREAK
 case 49:
 YY_RULE_SETUP
 #line 97 "c.l"
-{ return I_CONSTANT; }
+{ int_table.add_string(yytext); return I_CONSTANT; }
 	YY_BREAK
 case 50:
 YY_RULE_SETUP
 #line 98 "c.l"
-{ return I_CONSTANT; }
+{ int_table.add_string(yytext); return I_CONSTANT; }
 	YY_BREAK
 case 51:
 YY_RULE_SETUP
 #line 99 "c.l"
-{ return I_CONSTANT; }
+{ int_table.add_string(yytext); return I_CONSTANT; }
 	YY_BREAK
 case 52:
 YY_RULE_SETUP
 #line 100 "c.l"
-{ return I_CONSTANT; }
+{ int_table.add_string(yytext); return I_CONSTANT; }
 	YY_BREAK
 case 53:
 YY_RULE_SETUP
@@ -1398,7 +1398,7 @@ case 59:
 /* rule 59 can match eol */
 YY_RULE_SETUP
 #line 109 "c.l"
-{ return STRING_LITERAL; }
+{ str_table.add_string(yytext); return STRING_LITERAL; }
 	YY_BREAK
 case 60:
 YY_RULE_SETUP

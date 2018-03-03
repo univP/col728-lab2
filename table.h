@@ -26,8 +26,8 @@ public:
     int get_len();
 };
 
-extern Table idTable;
-extern Table strTable;
-extern Table intTable;
+extern Table id_table;
+extern Table str_table;
+extern Table int_table;
 
 #endif

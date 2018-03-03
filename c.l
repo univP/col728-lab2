@@ -37,9 +37,9 @@ static int check_type(void);
 
 // Define string tables.
 #include "table.h"
-Table idTable;
-Table strTable;
-Table intTable;
+Table id_table;
+Table str_table;
+Table int_table;
 %}
 
 %%
@@ -92,12 +92,12 @@ Table intTable;
 "_Thread_local"                         { return THREAD_LOCAL; }
 "__func__"                              { return FUNC_NAME; }
 
-{L}{A}*					{ return check_type(); }
+{L}{A}*					{ id_table.add_string(yytext); return check_type(); }
 
-{HP}{H}+{IS}?				{ return I_CONSTANT; }
-{NZ}{D}*{IS}?				{ return I_CONSTANT; }
-"0"{O}*{IS}?				{ return I_CONSTANT; }
-{CP}?"'"([^'\\\n]|{ES})+"'"		{ return I_CONSTANT; }
+{HP}{H}+{IS}?				{ int_table.add_string(yytext); return I_CONSTANT; }
+{NZ}{D}*{IS}?				{ int_table.add_string(yytext); return I_CONSTANT; }
+"0"{O}*{IS}?				{ int_table.add_string(yytext); return I_CONSTANT; }
+{CP}?"'"([^'\\\n]|{ES})+"'"		{ int_table.add_string(yytext); return I_CONSTANT; }
 
 {D}+{E}{FS}?				{ return F_CONSTANT; }
 {D}*"."{D}+{E}?{FS}?			{ return F_CONSTANT; }
@@ -106,7 +106,7 @@ Table intTable;
 {HP}{H}*"."{H}+{P}{FS}?			{ return F_CONSTANT; }
 {HP}{H}+"."{P}{FS}?			{ return F_CONSTANT; }
 
-({SP}?\"([^"\\\n]|{ES})*\"{WS}*)+	{ return STRING_LITERAL; }
+({SP}?\"([^"\\\n]|{ES})*\"{WS}*)+	{ str_table.add_string(yytext); return STRING_LITERAL; }
 
 "..."					{ return ELLIPSIS; }
 ">>="					{ return RIGHT_ASSIGN; }
