@@ -38,16 +38,7 @@ main(int argc, char **argv)
 |   Section 2 : Symbol definitions of tree.h    |
 `----------------------------------------------*/
 
-ast_program::ast_program(List<ast_external_declaration>* external_declarations)
-        : external_declarations (external_declarations) {}
 
-ast_type_specifier::ast_type_specifier(Symbol type_specifier)
-        : type_specifier(type_specifier) {}
-
-ast_identifier::ast_identifier(Symbol identifier): identifier(identifier) {}
-
-ast_jump_statement::ast_jump_statement(ast_i_constant* i_constant)
-        : i_constant(i_constant) {};
 
 /*--------------------------------------------------.
 |   Section 3 : Symbol definitions for stringtab.h  |

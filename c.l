@@ -36,7 +36,7 @@ static int check_type(void);
 #define YY_DECL extern "C" int yylex()
 
 // Define string tables.
-#include "table.h"
+#include "parser.h"
 Table id_table;
 Table str_table;
 Table int_table;
@@ -92,12 +92,20 @@ Table int_table;
 "_Thread_local"                         { return THREAD_LOCAL; }
 "__func__"                              { return FUNC_NAME; }
 
-{L}{A}*					{ id_table.add_string(yytext); return check_type(); }
+{L}{A}*					{ 
+    yylval.symbol = id_table.add_string(yytext); return check_type(); }
 
-{HP}{H}+{IS}?				{ int_table.add_string(yytext); return I_CONSTANT; }
-{NZ}{D}*{IS}?				{ int_table.add_string(yytext); return I_CONSTANT; }
-"0"{O}*{IS}?				{ int_table.add_string(yytext); return I_CONSTANT; }
-{CP}?"'"([^'\\\n]|{ES})+"'"		{ int_table.add_string(yytext); return I_CONSTANT; }
+{HP}{H}+{IS}?				{ 
+    yylval.symbol = int_table.add_string(yytext); return I_CONSTANT; }
+
+{NZ}{D}*{IS}?				{ 
+    yylval.symbol = int_table.add_string(yytext); return I_CONSTANT; }
+
+"0"{O}*{IS}?				{ 
+    yylval.symbol = int_table.add_string(yytext); return I_CONSTANT; }
+
+{CP}?"'"([^'\\\n]|{ES})+"'"		{ 
+    yylval.symbol = int_table.add_string(yytext); return I_CONSTANT; }
 
 {D}+{E}{FS}?				{ return F_CONSTANT; }
 {D}*"."{D}+{E}?{FS}?			{ return F_CONSTANT; }
@@ -106,7 +114,8 @@ Table int_table;
 {HP}{H}*"."{H}+{P}{FS}?			{ return F_CONSTANT; }
 {HP}{H}+"."{P}{FS}?			{ return F_CONSTANT; }
 
-({SP}?\"([^"\\\n]|{ES})*\"{WS}*)+	{ str_table.add_string(yytext); return STRING_LITERAL; }
+({SP}?\"([^"\\\n]|{ES})*\"{WS}*)+	{ 
+    yylval.symbol = str_table.add_string(yytext); return STRING_LITERAL; }
 
 "..."					{ return ELLIPSIS; }
 ">>="					{ return RIGHT_ASSIGN; }
