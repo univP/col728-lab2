@@ -16,7 +16,7 @@ static void usage()
 |   Section 1: Main control flow of the program.    |
 `--------------------------------------------------*/
 
-#include "tree.h"
+#include "parser.h"
 extern "C" ast_program* root;
 
 int
@@ -38,7 +38,56 @@ main(int argc, char **argv)
 |   Section 2 : Symbol definitions of tree.h    |
 `----------------------------------------------*/
 
+ast_program::ast_program(ast_external_declaration* external_declaration)
+    : external_declaration(external_declaration) {}
 
+ast_function_definition::ast_function_definition(
+        ast_type_specifier* type_specifier,
+        ast_declarator* declarator,
+        ast_compound_statement* compound_statement)
+    : type_specifier(type_specifier),
+        declarator(declarator),
+        compound_statement(compound_statement) {}
+
+ast_declaration::ast_declaration(ast_type_specifier* type_specifier,
+        List<ast_init_declarator>* init_declarators)
+    : init_declarators(init_declarators) {}
+
+ast_init_declarator::ast_init_declarator(ast_declarator* declarator)
+    : declarator(declarator)  {}
+
+ast_type_specifier::ast_type_specifier(Symbol type_specifier)
+    : type_specifier(type_specifier) {}
+
+ast_identifier_declarator::ast_identifier_declarator(Symbol identifier)
+    : identifier(identifier) {}
+
+ast_function_declarator::ast_function_declarator(
+        ast_direct_declarator* direct_declarator,
+        List<ast_parameter_declaration>* parameter_declarations)
+    : direct_declarator(direct_declarator),
+        parameter_declarations(parameter_declarations) {}
+
+ast_parameter_declaration::ast_parameter_declaration(
+        ast_type_specifier* type_specifier,
+        ast_declarator* declarator)
+    : type_specifier(type_specifier),
+        declarator(declarator) {}
+
+ast_compound_statement::ast_compound_statement(List<ast_block_item>* block_items)
+    : block_items(block_items) {}
+
+ast_expression_statement::ast_expression_statement(ast_expression* expression)
+    : expression(expression) {}
+
+ast_identifier_expression::ast_identifier_expression(Symbol identifier)
+    : identifier(identifier) {}
+
+ast_i_constant::ast_i_constant(Symbol i_constant)
+    : i_constant(i_constant) {}
+
+ast_f_constant::ast_f_constant(Symbol f_constant)
+    : f_constant(f_constant) {}
 
 /*--------------------------------------------------.
 |   Section 3 : Symbol definitions for stringtab.h  |

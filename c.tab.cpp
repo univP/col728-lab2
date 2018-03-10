@@ -511,10 +511,10 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,    62,    62,    66,    67,    68,    72,    73,    77,    81,
-      85,    89,    90,    94,    98,    99,   100,   101,   105,   109,
-     110,   111,   115,   119,   120,   124,   128,   129,   133,   134,
-     138,   139,   143,   144,   148,   149,   153,   157,   161
+       0,    65,    65,    70,    72,    74,    79,    81,    86,    91,
+      96,   101,   103,   109,   114,   116,   118,   120,   125,   130,
+     132,   134,   139,   144,   146,   152,   157,   159,   164,   166,
+     171,   173,   179,   181,   186,   188,   193,   198,   203
 };
 #endif
 
@@ -1346,8 +1346,233 @@ yyreduce:
   YY_REDUCE_PRINT (yyn);
   switch (yyn)
     {
-      
-#line 1351 "c.tab.cpp" /* yacc.c:1646  */
+        case 2:
+#line 66 "c.y" /* yacc.c:1646  */
+    { program = new ast_program((yyvsp[0].external_declaration)); }
+#line 1353 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 3:
+#line 71 "c.y" /* yacc.c:1646  */
+    { (yyval.expression) = new ast_identifier_expression((yyvsp[0].symbol)); }
+#line 1359 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 4:
+#line 73 "c.y" /* yacc.c:1646  */
+    { (yyval.expression) = (yyvsp[0].expression); }
+#line 1365 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 5:
+#line 75 "c.y" /* yacc.c:1646  */
+    { (yyval.expression) = (yyvsp[-1].expression); }
+#line 1371 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 6:
+#line 80 "c.y" /* yacc.c:1646  */
+    { (yyval.expression) = new ast_i_constant((yyvsp[0].symbol)); }
+#line 1377 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 7:
+#line 82 "c.y" /* yacc.c:1646  */
+    { (yyval.expression) = new ast_f_constant((yyvsp[0].symbol)); }
+#line 1383 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 8:
+#line 87 "c.y" /* yacc.c:1646  */
+    { (yyval.expression) = (yyvsp[0].expression); }
+#line 1389 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 9:
+#line 92 "c.y" /* yacc.c:1646  */
+    { (yyval.block_item) = new ast_declaration((yyvsp[-2].type_specifier), (yyvsp[-1].init_declarators)); }
+#line 1395 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 10:
+#line 97 "c.y" /* yacc.c:1646  */
+    { (yyval.type_specifier) = (yyvsp[0].type_specifier); }
+#line 1401 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 11:
+#line 102 "c.y" /* yacc.c:1646  */
+    { (yyval.init_declarators) = new List<ast_init_declarator>((yyvsp[0].init_declarator), NULL); }
+#line 1407 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 12:
+#line 104 "c.y" /* yacc.c:1646  */
+    { (yyval.init_declarators) = list_append<ast_init_declarator>((yyvsp[-2].init_declarators),
+		new List<ast_init_declarator>((yyvsp[0].init_declarator), NULL)); }
+#line 1414 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 13:
+#line 110 "c.y" /* yacc.c:1646  */
+    { (yyval.init_declarator) = new ast_init_declarator((yyvsp[0].declarator)); }
+#line 1420 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 14:
+#line 115 "c.y" /* yacc.c:1646  */
+    { (yyval.type_specifier) = new ast_type_specifier(id_table.add_string("void")); }
+#line 1426 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 15:
+#line 117 "c.y" /* yacc.c:1646  */
+    { (yyval.type_specifier) = new ast_type_specifier(id_table.add_string("char")); }
+#line 1432 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 16:
+#line 119 "c.y" /* yacc.c:1646  */
+    { (yyval.type_specifier) = new ast_type_specifier(id_table.add_string("int")); }
+#line 1438 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 17:
+#line 121 "c.y" /* yacc.c:1646  */
+    { (yyval.type_specifier) = new ast_type_specifier(id_table.add_string("float")); }
+#line 1444 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 18:
+#line 126 "c.y" /* yacc.c:1646  */
+    { (yyval.declarator) = (yyvsp[0].direct_declarator); }
+#line 1450 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 19:
+#line 131 "c.y" /* yacc.c:1646  */
+    { (yyval.direct_declarator) = new ast_identifier_declarator((yyvsp[0].symbol)); }
+#line 1456 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 20:
+#line 133 "c.y" /* yacc.c:1646  */
+    { (yyval.direct_declarator) = new ast_function_declarator((yyvsp[-3].direct_declarator), (yyvsp[-1].parameter_declarations)); }
+#line 1462 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 21:
+#line 135 "c.y" /* yacc.c:1646  */
+    { (yyval.direct_declarator) = new ast_function_declarator((yyvsp[-2].direct_declarator), NULL); }
+#line 1468 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 22:
+#line 140 "c.y" /* yacc.c:1646  */
+    { (yyval.parameter_declarations) = (yyvsp[0].parameter_declarations); }
+#line 1474 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 23:
+#line 145 "c.y" /* yacc.c:1646  */
+    { (yyval.parameter_declarations) = new List<ast_paramater_declaration>((yyvsp[0].parameter_declaration), NULL); }
+#line 1480 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 24:
+#line 147 "c.y" /* yacc.c:1646  */
+    { (yyval.parameter_declarations) = list_append<ast_paramater_declaration>((yyvsp[-2].parameter_declarations),
+		new List<ast_paramater_declaration>((yyvsp[0].parameter_declaration), NULL)); }
+#line 1487 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 25:
+#line 153 "c.y" /* yacc.c:1646  */
+    { (yyval.parameter_declaration) = new ast_paramater_declaration((yyvsp[-1].type_specifier), (yyvsp[0].declarator)); }
+#line 1493 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 26:
+#line 158 "c.y" /* yacc.c:1646  */
+    { (yyval.block_item) = (yyvsp[0].compound_statement); }
+#line 1499 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 27:
+#line 160 "c.y" /* yacc.c:1646  */
+    { (yyval.block_item) = new ast_expression_statement((yyvsp[0].expression)); }
+#line 1505 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 28:
+#line 165 "c.y" /* yacc.c:1646  */
+    { (yyval.compound_statement) = new ast_compound_statement(NULL); }
+#line 1511 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 29:
+#line 167 "c.y" /* yacc.c:1646  */
+    { (yyval.compound_statement) = new ast_compound_statement((yyvsp[-1].block_items)); }
+#line 1517 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 30:
+#line 172 "c.y" /* yacc.c:1646  */
+    { (yyval.block_items) = new List<ast_block_item>((yyvsp[0].block_item), NULL); }
+#line 1523 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 31:
+#line 174 "c.y" /* yacc.c:1646  */
+    { (yyval.block_items) = list_append<ast_block_item>((yyvsp[-1].block_items),
+		new List<ast_block_item>((yyvsp[0].block_item), NULL)); }
+#line 1530 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 32:
+#line 180 "c.y" /* yacc.c:1646  */
+    { (yyval.block_item) = (yyvsp[0].block_item); }
+#line 1536 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 33:
+#line 182 "c.y" /* yacc.c:1646  */
+    { (yyval.block_item) = (yyvsp[0].block_item); }
+#line 1542 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 34:
+#line 187 "c.y" /* yacc.c:1646  */
+    { (yyval.expression) = new ast_no_expression(); }
+#line 1548 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 35:
+#line 189 "c.y" /* yacc.c:1646  */
+    { (yyval.expression) = (yyvsp[-1].expression); }
+#line 1554 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 36:
+#line 194 "c.y" /* yacc.c:1646  */
+    { (yyval.external_declaration) = (yyvsp[0].external_declaration); }
+#line 1560 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 37:
+#line 199 "c.y" /* yacc.c:1646  */
+    { (yyval.external_declaration) = (yyvsp[0].external_declaration); }
+#line 1566 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+  case 38:
+#line 204 "c.y" /* yacc.c:1646  */
+    { (yyval.external_declaration) = new ast_function_definition((yyvsp[-2].type_specifier), (yyvsp[-1].declarator), (yyvsp[0].compound_statement)); }
+#line 1572 "c.tab.cpp" /* yacc.c:1646  */
+    break;
+
+
+#line 1576 "c.tab.cpp" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -1575,7 +1800,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 164 "c.y" /* yacc.c:1906  */
+#line 207 "c.y" /* yacc.c:1906  */
 
 #include <stdio.h>
 
