@@ -1,7 +1,7 @@
 #ifndef TREE_H
 #define TREE_H
 
-#include "table.h"
+#include "symtab.h"
 
 // Forward declarations
 class ast_struct;

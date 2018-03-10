@@ -36,9 +36,10 @@ main(int argc, char **argv)
         usage();
         exit(1);
     }
+
     char const *filename = argv[1];
     yyin = fopen(filename, "r");
-    assert(yyin);
+    assert(yyin != NULL);
     int ret = yyparse();
     printf("retv = %d\n", ret);
     
