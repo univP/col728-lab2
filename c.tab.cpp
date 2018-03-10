@@ -1475,20 +1475,20 @@ yyreduce:
 
   case 23:
 #line 145 "c.y" /* yacc.c:1646  */
-    { (yyval.parameter_declarations) = new List<ast_paramater_declaration>((yyvsp[0].parameter_declaration), NULL); }
+    { (yyval.parameter_declarations) = new List<ast_parameter_declaration>((yyvsp[0].parameter_declaration), NULL); }
 #line 1480 "c.tab.cpp" /* yacc.c:1646  */
     break;
 
   case 24:
 #line 147 "c.y" /* yacc.c:1646  */
-    { (yyval.parameter_declarations) = list_append<ast_paramater_declaration>((yyvsp[-2].parameter_declarations),
-		new List<ast_paramater_declaration>((yyvsp[0].parameter_declaration), NULL)); }
+    { (yyval.parameter_declarations) = list_append<ast_parameter_declaration>((yyvsp[-2].parameter_declarations),
+		new List<ast_parameter_declaration>((yyvsp[0].parameter_declaration), NULL)); }
 #line 1487 "c.tab.cpp" /* yacc.c:1646  */
     break;
 
   case 25:
 #line 153 "c.y" /* yacc.c:1646  */
-    { (yyval.parameter_declaration) = new ast_paramater_declaration((yyvsp[-1].type_specifier), (yyvsp[0].declarator)); }
+    { (yyval.parameter_declaration) = new ast_parameter_declaration((yyvsp[-1].type_specifier), (yyvsp[0].declarator)); }
 #line 1493 "c.tab.cpp" /* yacc.c:1646  */
     break;
 

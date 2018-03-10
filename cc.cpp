@@ -41,23 +41,25 @@ main(int argc, char **argv)
 ast_program::ast_program(ast_external_declaration* external_declaration)
     : external_declaration(external_declaration) {}
 
-ast_function_definition::ast_function_definition(
-        ast_type_specifier* type_specifier,
-        ast_declarator* declarator,
-        ast_compound_statement* compound_statement)
-    : type_specifier(type_specifier),
-        declarator(declarator),
-        compound_statement(compound_statement) {}
+ast_identifier_expression::ast_identifier_expression(Symbol identifier)
+    : identifier(identifier) {}
+
+ast_i_constant::ast_i_constant(Symbol i_constant)
+    : i_constant(i_constant) {}
+
+ast_f_constant::ast_f_constant(Symbol f_constant)
+    : f_constant(f_constant) {}
 
 ast_declaration::ast_declaration(ast_type_specifier* type_specifier,
         List<ast_init_declarator>* init_declarators)
-    : init_declarators(init_declarators) {}
-
-ast_init_declarator::ast_init_declarator(ast_declarator* declarator)
-    : declarator(declarator)  {}
+    : type_specifier(type_specifier),
+        init_declarators(init_declarators) {}
 
 ast_type_specifier::ast_type_specifier(Symbol type_specifier)
     : type_specifier(type_specifier) {}
+
+ast_init_declarator::ast_init_declarator(ast_declarator* declarator)
+    : declarator(declarator)  {}
 
 ast_identifier_declarator::ast_identifier_declarator(Symbol identifier)
     : identifier(identifier) {}
@@ -80,14 +82,13 @@ ast_compound_statement::ast_compound_statement(List<ast_block_item>* block_items
 ast_expression_statement::ast_expression_statement(ast_expression* expression)
     : expression(expression) {}
 
-ast_identifier_expression::ast_identifier_expression(Symbol identifier)
-    : identifier(identifier) {}
-
-ast_i_constant::ast_i_constant(Symbol i_constant)
-    : i_constant(i_constant) {}
-
-ast_f_constant::ast_f_constant(Symbol f_constant)
-    : f_constant(f_constant) {}
+ast_function_definition::ast_function_definition(
+        ast_type_specifier* type_specifier,
+        ast_declarator* declarator,
+        ast_compound_statement* compound_statement)
+    : type_specifier(type_specifier),
+        declarator(declarator),
+        compound_statement(compound_statement) {}
 
 /*--------------------------------------------------.
 |   Section 3 : Symbol definitions for stringtab.h  |
@@ -119,27 +120,4 @@ List<Entry>* Table::get_table() {
 
 int Table::get_len() {
     return len;
-}
-
-/*----------------------------------------------.
-|   Section 4 : Symbol definitions of list.h    |
-`----------------------------------------------*/
-
-template <class T>
-int list_len(List<T>* list) {
-    if (list == NULL) {
-        return 0;
-    } else {
-        return 1 + list_len(list->get_tail());
-    }
-}
-
-// Elements of first come at the head end of the list.
-template <class T>
-List<T>* list_append(List<T>* first, List<T>* second) {
-    if (first == NULL) {
-        return second;
-    } else {
-        return new List<T>(first->get_head(), list_append(first->get_tail(), second));
-    }
 }

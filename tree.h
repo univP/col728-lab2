@@ -6,31 +6,30 @@
 // Forward declarations
 class ast_struct;
 class ast_program;
-class ast_external_declaration;
-class ast_function_definition;      // subclass of ast_external_declaration
 
-class ast_declaration;              // subclass of block_item
-
-class ast_type_specifier;           // subclass of ast_declaration_specifier
-
-class ast_init_declarator;
-class ast_declarator;
-class ast_direct_declarator;        // subclass of ast_declarator
-class ast_identifier_declarator;     // subclass of ast_direct_declarator
-class ast_function_declarator;      // subclass of ast_direct_declarator
-class ast_parameter_declaration;
-
-class ast_statement;                // subclass of block_item
-
-class ast_compound_statement;
-class ast_block_item;
-
-class ast_expression_statement;
-class ast_expression;
-class ast_no_expression;            // Subclasses of ast_expression below
+class ast_expression;                   // Subclasses of ast_expression below
 class ast_identifier_expression;  
 class ast_i_constant;
-class ast_f_constant;  
+class ast_f_constant;
+class ast_no_expression;
+
+class ast_block_item;
+class ast_declaration;                  // subclass of block_item
+class ast_type_specifier;
+class ast_init_declarator;
+
+class ast_declarator;
+class ast_direct_declarator;            // subclass of ast_declarator
+class ast_identifier_declarator;        // subclass of ast_direct_declarator
+class ast_function_declarator;          // subclass of ast_direct_declarator
+class ast_parameter_declaration;
+
+class ast_statement;                    // subclass of block_item
+class ast_compound_statement;
+class ast_expression_statement;
+
+class ast_external_declaration;
+class ast_function_definition;          // subclass of ast_external_declaration
 
 
 // Class definitions
@@ -45,26 +44,29 @@ public:
     ast_program(ast_external_declaration* external_declaration);
 };
 
-class ast_external_declaration : public ast_struct {
+class ast_expression : public ast_struct {
 
 };
 
-class ast_type_specifier : public ast_struct {
+class ast_identifier_expression : public ast_expression {
 private:
-    Symbol type_specifier;
+    Symbol identifier;
 public:
-    ast_type_specifier(Symbol type_specifier);
+    ast_identifier_expression(Symbol identifier);
 };
 
-class ast_function_definition : public ast_external_declaration {
+class ast_i_constant : public ast_expression {
 private:
-    ast_type_specifier* type_specifier;
-    ast_declarator* declarator;
-    ast_compound_statement* compound_statement;
+    Symbol i_constant;
 public:
-    ast_function_definition(ast_type_specifier* type_specifier,
-        ast_declarator* declarator,
-        ast_compound_statement* compound_statement);
+    ast_i_constant(Symbol i_constant);
+};
+
+class ast_f_constant : public ast_expression {
+private:
+    Symbol f_constant;
+public:
+    ast_f_constant(Symbol f_constant);
 };
 
 class ast_block_item : public ast_struct {
@@ -78,6 +80,13 @@ private:
 public:
     ast_declaration(ast_type_specifier* type_specifier,
         List<ast_init_declarator>* init_declarators);
+};
+
+class ast_type_specifier : public ast_struct {
+private:
+    Symbol type_specifier;
+public:
+    ast_type_specifier(Symbol type_specifier);
 };
 
 class ast_init_declarator : public ast_struct {
@@ -138,33 +147,25 @@ public:
     ast_expression_statement(ast_expression* expression);
 };
 
-class ast_expression : public ast_struct {
-
-};
-
 class ast_no_expression : public ast_expression {
 
 };
 
-class ast_identifier_expression : public ast_expression {
-private:
-    Symbol identifier;
-public:
-    ast_identifier_expression(Symbol identifier);
+class ast_external_declaration : public ast_struct {
+
 };
 
-class ast_i_constant : public ast_expression {
+class ast_function_definition : public ast_external_declaration {
 private:
-    Symbol i_constant;
+    ast_type_specifier* type_specifier;
+    ast_declarator* declarator;
+    ast_compound_statement* compound_statement;
 public:
-    ast_i_constant(Symbol i_constant);
+    ast_function_definition(ast_type_specifier* type_specifier,
+        ast_declarator* declarator,
+        ast_compound_statement* compound_statement);
 };
 
-class ast_f_constant : public ast_expression {
-private:
-    Symbol f_constant;
-public:
-    ast_f_constant(Symbol f_constant);
-};
+
 
 #endif

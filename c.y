@@ -142,15 +142,15 @@ parameter_type_list
 
 parameter_list
 	: parameter_declaration
-	{ $$ = new List<ast_paramater_declaration>($1, NULL); }
+	{ $$ = new List<ast_parameter_declaration>($1, NULL); }
 	| parameter_list ',' parameter_declaration
-	{ $$ = list_append<ast_paramater_declaration>($1,
-		new List<ast_paramater_declaration>($3, NULL)); }
+	{ $$ = list_append<ast_parameter_declaration>($1,
+		new List<ast_parameter_declaration>($3, NULL)); }
 	;
 
 parameter_declaration
 	: declaration_specifiers declarator
-	{ $$ = new ast_paramater_declaration($1, $2); }
+	{ $$ = new ast_parameter_declaration($1, $2); }
 	;
 
 statement
