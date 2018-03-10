@@ -1,8 +1,13 @@
-int printf(char const *format, ...);
+// Parsing:
+//  expression
+//      identifiers, constants, bracketed expressions 
+// declaration
+//      declaration specifiers, init declarator list
+// direct declarator
+//      identifier, parameter list
 
-int
-main(int argc, char **argv)
-{
-    printf("hello, world\n");
-    return 0;
+int main(int x, int y) {
+    x;
+    ((12.0f));
+    int x, y, z;
 }

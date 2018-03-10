@@ -40,6 +40,7 @@ static int check_type(void);
 Table id_table;
 Table str_table;
 Table int_table;
+Table float_table;
 %}
 
 %%
@@ -107,12 +108,23 @@ Table int_table;
 {CP}?"'"([^'\\\n]|{ES})+"'"		{ 
     yylval.symbol = int_table.add_string(yytext); return I_CONSTANT; }
 
-{D}+{E}{FS}?				{ return F_CONSTANT; }
-{D}*"."{D}+{E}?{FS}?			{ return F_CONSTANT; }
-{D}+"."{E}?{FS}?			{ return F_CONSTANT; }
-{HP}{H}+{P}{FS}?			{ return F_CONSTANT; }
-{HP}{H}*"."{H}+{P}{FS}?			{ return F_CONSTANT; }
-{HP}{H}+"."{P}{FS}?			{ return F_CONSTANT; }
+{D}+{E}{FS}?				{ 
+    yylval.symbol = float_table.add_string(yytext); return F_CONSTANT; }
+
+{D}*"."{D}+{E}?{FS}?			{ 
+    yylval.symbol = float_table.add_string(yytext); return F_CONSTANT; }
+
+{D}+"."{E}?{FS}?			{ 
+    yylval.symbol = float_table.add_string(yytext); return F_CONSTANT; }
+
+{HP}{H}+{P}{FS}?			{ 
+    yylval.symbol = float_table.add_string(yytext); return F_CONSTANT; }
+
+{HP}{H}*"."{H}+{P}{FS}?			{ 
+    yylval.symbol = float_table.add_string(yytext); return F_CONSTANT; }
+
+{HP}{H}+"."{P}{FS}?			{ 
+    yylval.symbol = float_table.add_string(yytext); return F_CONSTANT; }
 
 ({SP}?\"([^"\\\n]|{ES})*\"{WS}*)+	{ 
     yylval.symbol = str_table.add_string(yytext); return STRING_LITERAL; }

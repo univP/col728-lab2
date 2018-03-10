@@ -31,10 +31,12 @@ class ast_expression_statement;
 class ast_external_declaration;
 class ast_function_definition;          // subclass of ast_external_declaration
 
+std::ostream& pad(int d, std::ostream& s);
 
 // Class definitions
 class ast_struct {
-
+public:
+    virtual std::ostream& print_struct(int d, std::ostream& s) = 0;
 };
 
 class ast_program : public ast_struct {
@@ -42,10 +44,15 @@ private:
     ast_external_declaration* external_declaration;
 public:
     ast_program(ast_external_declaration* external_declaration);
+    std::ostream& print_struct(int d, std::ostream& s);
 };
 
 class ast_expression : public ast_struct {
-
+private:
+    Symbol type;
+public:
+    Symbol get_type();
+    void set_type(Symbol type);
 };
 
 class ast_identifier_expression : public ast_expression {
@@ -53,6 +60,7 @@ private:
     Symbol identifier;
 public:
     ast_identifier_expression(Symbol identifier);
+    std::ostream& print_struct(int d, std::ostream& s);
 };
 
 class ast_i_constant : public ast_expression {
@@ -60,6 +68,7 @@ private:
     Symbol i_constant;
 public:
     ast_i_constant(Symbol i_constant);
+    std::ostream& print_struct(int d, std::ostream& s);
 };
 
 class ast_f_constant : public ast_expression {
@@ -67,6 +76,7 @@ private:
     Symbol f_constant;
 public:
     ast_f_constant(Symbol f_constant);
+    std::ostream& print_struct(int d, std::ostream& s);
 };
 
 class ast_block_item : public ast_struct {
@@ -80,6 +90,7 @@ private:
 public:
     ast_declaration(ast_type_specifier* type_specifier,
         List<ast_init_declarator>* init_declarators);
+    std::ostream& print_struct(int d, std::ostream& s);
 };
 
 class ast_type_specifier : public ast_struct {
@@ -87,6 +98,7 @@ private:
     Symbol type_specifier;
 public:
     ast_type_specifier(Symbol type_specifier);
+    std::ostream& print_struct(int d, std::ostream& s);
 };
 
 class ast_init_declarator : public ast_struct {
@@ -94,6 +106,7 @@ private:
     ast_declarator* declarator;
 public:
     ast_init_declarator(ast_declarator* declarator);
+    std::ostream& print_struct(int d, std::ostream& s);
 };
 
 class ast_declarator : public ast_struct {
@@ -109,6 +122,7 @@ private:
     Symbol identifier;
 public:
     ast_identifier_declarator(Symbol identifier);
+    std::ostream& print_struct(int d, std::ostream& s);
 };
 
 class ast_function_declarator : public ast_direct_declarator {
@@ -118,6 +132,7 @@ private:
 public:
     ast_function_declarator(ast_direct_declarator* direct_declarator,
         List<ast_parameter_declaration>* parameter_declarations);
+    std::ostream& print_struct(int d, std::ostream& s);
 };
 
 class ast_parameter_declaration : public ast_struct {
@@ -127,6 +142,7 @@ private:
 public:
     ast_parameter_declaration(ast_type_specifier* type_specifier,
         ast_declarator* declarator);
+    std::ostream& print_struct(int d, std::ostream& s);
 };
 
 class ast_statement : public ast_block_item {
@@ -138,6 +154,7 @@ private:
     List<ast_block_item>* block_items;
 public:
     ast_compound_statement(List<ast_block_item>* block_items);
+    std::ostream& print_struct(int d, std::ostream& s);
 };
 
 class ast_expression_statement : public ast_statement {
@@ -145,10 +162,13 @@ private:
     ast_expression* expression;
 public:
     ast_expression_statement(ast_expression* expression);
+    std::ostream& print_struct(int d, std::ostream& s);
 };
 
 class ast_no_expression : public ast_expression {
-
+public:
+    ast_no_expression();
+    std::ostream& print_struct(int d, std::ostream& s);
 };
 
 class ast_external_declaration : public ast_struct {
@@ -164,6 +184,7 @@ public:
     ast_function_definition(ast_type_specifier* type_specifier,
         ast_declarator* declarator,
         ast_compound_statement* compound_statement);
+    std::ostream& print_struct(int d, std::ostream& s);
 };
 
 

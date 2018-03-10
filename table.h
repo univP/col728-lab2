@@ -29,5 +29,6 @@ public:
 extern Table id_table;
 extern Table str_table;
 extern Table int_table;
+extern Table float_table;
 
 #endif

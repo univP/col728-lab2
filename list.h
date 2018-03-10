@@ -2,6 +2,8 @@
 #define LIST_H
 
 #include <string>
+#include <iostream>
+#include <cassert>
 
 // Simple definition of a list.
 template <class T>
