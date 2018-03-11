@@ -21,8 +21,13 @@ extern "C" ast_program* program;
 int semant_debug = 1;
 int cgen_debug = 0;
 
+StrTable id_table;
+StrTable str_table;
+StrTable int_table;
+StrTable float_table;
+
 Symbol
-    Void = id_table.add_string("int"),
+    Void = id_table.add_string("void"),
     Char = id_table.add_string("char"),
     Int = id_table.add_string("int"),
     Float = id_table.add_string("float"),
@@ -69,17 +74,17 @@ void ast_expression::set_type(Symbol type) {
 } 
 
 std::ostream& ast_identifier_expression::print_struct(int d, std::ostream& s) {
-    pad(d, s) << identifier->get_str() << ": " << get_type()->get_str() << std::endl;
+    pad(d, s) << *identifier << ": " << *get_type() << std::endl;
     return s;
 }
 
 std::ostream& ast_i_constant::print_struct(int d, std::ostream& s) {
-    pad(d, s) << i_constant->get_str() << ": " << get_type()->get_str() << std::endl;
+    pad(d, s) << *i_constant << ": " << *get_type() << std::endl;
     return s;
 }
 
 std::ostream& ast_f_constant::print_struct(int d, std::ostream& s) {
-    pad(d, s) << f_constant->get_str() << ": " << get_type()->get_str() << std::endl;
+    pad(d, s) << *f_constant << ": " << *get_type() << std::endl;
     return s;
 }
 
@@ -87,15 +92,16 @@ std::ostream& ast_declaration::print_struct(int d, std::ostream& s) {
     pad(d, s) << ".declaration" << std::endl;
     type_specifier->print_struct(d+1, s);
 
-    for (List<ast_init_declarator>* l = init_declarators; l; l = l->get_tail()) {
-        l->get_head()->print_struct(d+1, s);
+    for (ListI lit = init_declarators->begin(); lit != init_declarators->end(); lit++) {
+        ast_init_declarator* init_declarator = *lit;
+        init_declarator->print_struct(d+1, s);
     }
 
     return s;
 }
 
 std::ostream& ast_type_specifier::print_struct(int d, std::ostream& s) {
-    pad(d, s) << type_specifier->get_str() << std::endl;
+    pad(d, s) << *type_specifier << std::endl;
     return s;
 }
 
@@ -105,7 +111,7 @@ std::ostream& ast_init_declarator::print_struct(int d, std::ostream& s) {
 }
 
 std::ostream& ast_identifier_declarator::print_struct(int d, std::ostream& s) {
-    pad(d, s) << identifier->get_str() << std::endl;
+    pad(d, s) << *identifier << std::endl;
     return s;
 }
 
@@ -113,8 +119,10 @@ std::ostream& ast_function_declarator::print_struct(int d, std::ostream& s) {
     pad(d, s) << ".function_declarator" << std::endl;
     direct_declarator->print_struct(d+1, s);
 
-    for (List<ast_parameter_declaration>* l = parameter_declarations; l; l = l->get_tail()) {
-        l->get_head()->print_struct(d+1, s);
+    for (ListI lit = parameter_declarations->begin(); 
+            lit != parameter_declarations->end(); lit++) {
+        ast_parameter_declaration* parameter_declaration = *lit;
+        parameter_declaration->print_struct(d+1, s);
     }
 
     return s;
@@ -129,8 +137,9 @@ std::ostream& ast_parameter_declaration::print_struct(int d, std::ostream& s) {
 std::ostream& ast_compound_statement::print_struct(int d, std::ostream& s) {
     pad(d, s) << ".compound_statement" << std::endl;
 
-    for (List<ast_block_item>* l = block_items; l; l = l->get_tail()) {
-        l->get_head()->print_struct(d+1, s);
+    for (ListI lit = block_items->begin(); lit != block_items->end(); lit++) {
+        ast_block_item* block_item = *lit;
+        block_item->print_struct(d+1, s);
     }
 
     return s;
@@ -143,7 +152,7 @@ std::ostream& ast_expression_statement::print_struct(int d, std::ostream& s) {
 }
 
 std::ostream& ast_no_expression::print_struct(int d, std::ostream& s) {
-    pad(d, s) << get_type()->get_str() << std::endl;
+    pad(d, s) << *get_type() << std::endl;
     return s;
 }
 
@@ -178,7 +187,7 @@ ast_f_constant::ast_f_constant(Symbol f_constant)
 }
 
 ast_declaration::ast_declaration(ast_type_specifier* type_specifier,
-        List<ast_init_declarator>* init_declarators)
+        ast_init_declarator_list* init_declarators)
     : type_specifier(type_specifier),
         init_declarators(init_declarators) {}
 
@@ -193,7 +202,7 @@ ast_identifier_declarator::ast_identifier_declarator(Symbol identifier)
 
 ast_function_declarator::ast_function_declarator(
         ast_direct_declarator* direct_declarator,
-        List<ast_parameter_declaration>* parameter_declarations)
+        ast_parameter_declaration_list* parameter_declarations)
     : direct_declarator(direct_declarator),
         parameter_declarations(parameter_declarations) {}
 
@@ -203,7 +212,7 @@ ast_parameter_declaration::ast_parameter_declaration(
     : type_specifier(type_specifier),
         declarator(declarator) {}
 
-ast_compound_statement::ast_compound_statement(List<ast_block_item>* block_items)
+ast_compound_statement::ast_compound_statement(ast_block_item_list* block_items)
     : block_items(block_items) {}
 
 ast_expression_statement::ast_expression_statement(ast_expression* expression)
@@ -229,36 +238,4 @@ std::ostream& pad(int d, std::ostream& s) {
     }
 
     return s;
-}
-
-/*--------------------------------------------------.
-|   Section 3 : Symbol definitions for stringtab.h  |
-`--------------------------------------------------*/
-
-Entry::Entry(int index, std::string str): index(index), str(str) {}
-
-int Entry::get_index() { return index; }
-
-std::string Entry::get_str() { return str; }
-
-Table::Table(): table(NULL), len(0) {}
-
-Symbol Table::add_string(std::string str) {
-    for (List<Entry>* l = table; l; l = l->get_tail()) {
-        if (l->get_head()->get_str() == str) {
-            return l->get_head();
-        }
-    }
-
-    Symbol symbol = new Entry(len++, str);
-    table = new List<Entry>(symbol, table);
-    return symbol;
-}
-
-List<Entry>* Table::get_table() {
-    return table;
-}
-
-int Table::get_len() {
-    return len;
 }

@@ -37,10 +37,6 @@ static int check_type(void);
 
 // Define string tables.
 #include "parser.h"
-Table id_table;
-Table str_table;
-Table int_table;
-Table float_table;
 %}
 
 %%

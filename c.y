@@ -99,10 +99,11 @@ declaration_specifiers
 
 init_declarator_list
 	: init_declarator
-	{ $$ = new List<ast_init_declarator>($1, NULL); }
+	{ $$ = new ast_init_declarator_list();
+		$$->push_back($1); }
 	| init_declarator_list ',' init_declarator
-	{ $$ = list_append<ast_init_declarator>($1,
-		new List<ast_init_declarator>($3, NULL)); }
+	{ $1->push_back($3);
+		$$ = $1; }
 	;
 
 init_declarator
@@ -132,7 +133,7 @@ direct_declarator
 	| direct_declarator '(' parameter_type_list ')'
 	{ $$ = new ast_function_declarator($1, $3); }
 	| direct_declarator '(' ')'
-	{ $$ = new ast_function_declarator($1, NULL); }
+	{ $$ = new ast_function_declarator($1, new ast_parameter_declaration_list()); }
 	;
 
 parameter_type_list
@@ -142,10 +143,11 @@ parameter_type_list
 
 parameter_list
 	: parameter_declaration
-	{ $$ = new List<ast_parameter_declaration>($1, NULL); }
+	{ $$ = new ast_parameter_declaration_list(); 
+		$$->push_back($1); }
 	| parameter_list ',' parameter_declaration
-	{ $$ = list_append<ast_parameter_declaration>($1,
-		new List<ast_parameter_declaration>($3, NULL)); }
+	{ $1->push_back($3);
+		$$ = $1; }
 	;
 
 parameter_declaration
@@ -162,17 +164,18 @@ statement
 
 compound_statement
 	: '{' '}'
-	{ $$ = new ast_compound_statement(NULL); }
+	{ $$ = new ast_compound_statement(new ast_block_item_list()); }
 	| '{'  block_item_list '}'
 	{ $$ = new ast_compound_statement($2); }
 	;
 
 block_item_list
 	: block_item
-	{ $$ = new List<ast_block_item>($1, NULL); }
+	{ $$ = new ast_block_item_list();
+		$$->push_back($1); }
 	| block_item_list block_item
-	{ $$ = list_append<ast_block_item>($1,
-		new List<ast_block_item>($2, NULL)); }
+	{ $1->push_back($2);
+		$$ = $1; }
 	;
 
 block_item

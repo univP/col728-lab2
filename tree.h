@@ -14,15 +14,18 @@ class ast_f_constant;
 class ast_no_expression;
 
 class ast_block_item;
+typedef std::list<ast_block_item*> ast_block_item_list;
 class ast_declaration;                  // subclass of block_item
 class ast_type_specifier;
 class ast_init_declarator;
+typedef std::list<ast_init_declarator*> ast_init_declarator_list;
 
 class ast_declarator;
 class ast_direct_declarator;            // subclass of ast_declarator
 class ast_identifier_declarator;        // subclass of ast_direct_declarator
 class ast_function_declarator;          // subclass of ast_direct_declarator
 class ast_parameter_declaration;
+typedef std::list<ast_parameter_declaration*> ast_parameter_declaration_list;
 
 class ast_statement;                    // subclass of block_item
 class ast_compound_statement;
@@ -84,12 +87,13 @@ class ast_block_item : public ast_struct {
 };
 
 class ast_declaration : public ast_block_item {
+    typedef ast_init_declarator_list::iterator ListI;
 private:
     ast_type_specifier* type_specifier;
-    List<ast_init_declarator>* init_declarators;
+    ast_init_declarator_list* init_declarators;
 public:
     ast_declaration(ast_type_specifier* type_specifier,
-        List<ast_init_declarator>* init_declarators);
+        ast_init_declarator_list* init_declarators);
     std::ostream& print_struct(int d, std::ostream& s);
 };
 
@@ -126,12 +130,13 @@ public:
 };
 
 class ast_function_declarator : public ast_direct_declarator {
+    typedef ast_parameter_declaration_list::iterator ListI;
 private:
     ast_direct_declarator* direct_declarator;
-    List<ast_parameter_declaration>* parameter_declarations;
+    ast_parameter_declaration_list* parameter_declarations;
 public:
     ast_function_declarator(ast_direct_declarator* direct_declarator,
-        List<ast_parameter_declaration>* parameter_declarations);
+        ast_parameter_declaration_list* parameter_declarations);
     std::ostream& print_struct(int d, std::ostream& s);
 };
 
@@ -150,10 +155,11 @@ class ast_statement : public ast_block_item {
 };
 
 class ast_compound_statement : public ast_statement {
+    typedef ast_block_item_list::iterator ListI;
 private:
-    List<ast_block_item>* block_items;
+    ast_block_item_list* block_items;
 public:
-    ast_compound_statement(List<ast_block_item>* block_items);
+    ast_compound_statement(ast_block_item_list* block_items);
     std::ostream& print_struct(int d, std::ostream& s);
 };
 

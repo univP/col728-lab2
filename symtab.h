@@ -1,79 +1,57 @@
 #ifndef SYMTAB_H
 #define SYMTAB_H
 
-#include "table.h"
+#include "strtab.h"
 
 template <class SYM, class DAT>
-class SymtabEntry {
+class SymTable {
+    typedef std::map<SYM, DAT> Scope;
+    typedef typename Scope::iterator MapI;
+    typedef std::list<Scope*> ScopeList;
+    typedef typename ScopeList::iterator ListI;
 private:
-    SYM id;
-    DAT *info;
+    ScopeList tbl;
 public:
-    SymtabEntry(SYM x, DAT *y) : id(x), info(y) {}
-    SYM get_id() const    { return id; }
-    DAT *get_info() const { return info; }
-};
-
-template <class SYM, class DAT>
-class SymbolTable {
-    typedef SymtabEntry<SYM,DAT> ScopeEntry;
-    typedef List<ScopeEntry> Scope;
-    typedef List<Scope> ScopeList;
-private:
-    ScopeList  *tbl;
-public:
-    SymbolTable(): tbl(NULL) {}
-
-    void enterscope() {
-        tbl = new ScopeList((Scope *) NULL, tbl);
+    void enter_scope() {
+        tbl.push_back(new Scope());
     }
 
-    void exitscope() {
-        assert(tbl != NULL);
-        tbl = tbl->get_tail();
+    void exit_scope() {
+        assert(tbl.size());
+        tbl.pop_back();
     }
 
-    ScopeEntry *addid(SYM s, DAT *i) {
-        assert(tbl != NULL);
-        ScopeEntry * se = new ScopeEntry(s,i);
-        tbl = new ScopeList(new Scope(se, tbl->get_head()), tbl->get_tail());
-        return(se);
+    void insert(SYM sym, DAT* dat) {
+        assert(tbl.size());
+        Scope* scope = tbl.back();
+        assert(scope->find(sym) == scope->end());
+        scope->insert(std::make_pair(sym, dat));
     }
     
-    DAT * lookup(SYM s) {
-        for(ScopeList* i = tbl; i; i = i->get_tail()) {
-            for(Scope* j = i->get_head(); j; j = j->get_tail()) {
-                if (s == j->get_head()->get_id()) {
-                    return j->get_head()->get_info();
-                }
+    DAT* lookup(SYM sym) {
+        for (ListI lit = tbl.rbegin(); lit != tbl.rend(); lit++) {
+            Scope* scope = *lit;
+            ListI sit = scope->find(sym);
+
+            if (sit != scope->end()) {
+                return sit->second;
             }
         }
 
         return NULL;
     }
 
-    DAT *probe(SYM s) {
-        assert(tbl != NULL);
+    DAT* probe(SYM sym) {
+        assert(tbl.size());
+        Scope* scope = tbl.back();
+        ListI sit = scope->find(sym);
 
-        for(Scope* i = tbl->get_head(); i; i = i->get_tail()) {
-            if (s == i->get_head()->get_id()) {
-                return(i->get_head()->get_info());
-            }
+        if (sit != scope->end()) {
+            return sit->second;
         }
 
         return NULL;
     }
-
-    void print_tbl(std::ostream& s) {
-        for(ScopeList* i = tbl; i; i = i->get_tail()) {
-            s << "\nScope: " << std::endl;
-
-            for(Scope* j = i->get_head(); j; j = j->get_tail()) {
-                s << "  " << j->get_head()->get_id() << std::endl;
-            }
-        }
-    }
- 
 };
 
 #endif
