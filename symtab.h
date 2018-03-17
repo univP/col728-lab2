@@ -31,7 +31,7 @@ public:
     DAT* lookup(SYM sym) {
         for (ListI lit = tbl.rbegin(); lit != tbl.rend(); lit++) {
             Scope* scope = *lit;
-            ListI sit = scope->find(sym);
+            MapI sit = scope->find(sym);
 
             if (sit != scope->end()) {
                 return sit->second;
@@ -44,7 +44,7 @@ public:
     DAT* probe(SYM sym) {
         assert(tbl.size());
         Scope* scope = tbl.back();
-        ListI sit = scope->find(sym);
+        MapI sit = scope->find(sym);
 
         if (sit != scope->end()) {
             return sit->second;
