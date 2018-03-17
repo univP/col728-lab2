@@ -92,7 +92,8 @@ Symbol ast_type_specifier::get_type_specifier() {
 
 Arg* ast_parameter_declaration::get_arg() {
     assert(declarator->get_identifier() != NULL);
-    return new Arg(type_specifier, declarator->get_identifier());
+    return new Arg(type_specifier->get_type_specifier(), 
+        declarator->get_identifier());
 }
 
 Symbol ast_identifier_declarator::get_identifier() {
@@ -110,9 +111,9 @@ llvm::Function* ast_identifier_declarator::get_function(llvm::Type* return_type,
 
 llvm::Type* get_llvm_type(Symbol type_specifier, CodeGenContext* context) {
     if (type_specifier == Int) {
-        return llvm::Type::getInt32Ty(context);
+        return llvm::Type::getInt32Ty(context->llvm_context);
     } else if (type_specifier == Float) {
-        return llvm::Type::getFloatTy(context);
+        return llvm::Type::getFloatTy(context->llvm_context);
     }
 
     return NULL;
@@ -124,16 +125,18 @@ llvm::Function* ast_function_declarator::get_function(llvm::Type* return_type,
     assert(function_name != NULL);
     std::vector<llvm::Type*> param_types;
 
-    for (ListI lit = parameter_declarations->begin(); lit; lit++) {
-        param_types.push_back(llvm::Type::get(context->llvm_context,
-            get_llvm_type(lit->get_type_specifier())));
+    for (ListI lit = parameter_declarations->begin(); 
+            lit != parameter_declarations->end(); lit++) {
+        Arg* arg = (*lit)->get_arg();
+        param_types.push_back(get_llvm_type(arg->get_type_specifier(),
+            context));
     }
 
     llvm::FunctionType* function_type = llvm::FunctionType::get(return_type,
         param_types, false);
 
     llvm::Function* function = llvm::Function::Create(function_type,
-        Function::ExternalLinkage, function_name, context->module);
+        llvm::Function::ExternalLinkage, *function_name, context->module.get());
 
     return function;
 }

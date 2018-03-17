@@ -48,7 +48,7 @@ public:
     Symbol get_arg_name();
 };
 
-typedef list<Arg> Args;
+typedef std::list<Arg> Args;
 
 class ast_struct {
 public:
@@ -158,7 +158,6 @@ class ast_function_declarator : public ast_direct_declarator {
 private:
     ast_direct_declarator* direct_declarator;
     ast_parameter_declaration_list* parameter_declarations;
-    typedef ast_parameter_declaration_list::iterator ListI;
 public:
     ast_function_declarator(ast_direct_declarator* direct_declarator,
         ast_parameter_declaration_list* parameter_declarations);
