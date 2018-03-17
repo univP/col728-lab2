@@ -17,6 +17,7 @@ union YYSTYPE {
 	ast_compound_statement* compound_statement;
 	ast_block_item_list* block_items;
 	ast_external_declaration* external_declaration;
+	ast_external_declaration_list* external_declarations;
     Symbol symbol;
 };
 

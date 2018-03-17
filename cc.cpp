@@ -57,11 +57,20 @@ main(int argc, char **argv)
     exit(0);
 }
 
+/*------------------------------.
+|   Section 2 : Code generation |
+`------------------------------*/
+
 void ast_program::CodeGen() {
     CodeGenContext* context = new CodeGenContext();
     context->module = llvm::make_unique<llvm::Module>("my cool jit",
         context->llvm_context);
-    external_declaration->CodeGen(context);
+
+    for (ListI lit = external_declarations->begin(); 
+            lit != external_declarations->end(); lit++) {
+        (*lit)->CodeGen(context);
+    }
+    
     context->module->print(llvm::errs(), nullptr);
 }
 
@@ -207,7 +216,12 @@ llvm::Function* ast_function_definition::CodeGen(CodeGenContext* context) {
 
 std::ostream& ast_program::print_struct(int d, std::ostream& s) {
     pad(d, s) << ".program" << std::endl;
-    external_declaration->print_struct(d+1, s) << std::endl;
+    
+    for (ListI lit = external_declarations->begin();
+            lit != external_declarations->end(); lit++) {
+        (*lit)->print_struct(d+1, s) << std::endl;
+    }
+
     return s;
 }
 
@@ -316,8 +330,8 @@ std::ostream& ast_function_definition::print_struct(int d, std::ostream& s) {
 |   Section 2 : Contructors of tree nodes in AST.    |
 `---------------------------------------------------*/
 
-ast_program::ast_program(ast_external_declaration* external_declaration)
-    : external_declaration(external_declaration) {}
+ast_program::ast_program(ast_external_declaration_list* external_declarations)
+    : external_declarations(external_declarations) {}
 
 ast_identifier_expression::ast_identifier_expression(Symbol identifier)
     : identifier(identifier) {

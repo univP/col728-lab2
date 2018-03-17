@@ -36,7 +36,7 @@ ast_program* program;
 %type <block_items> block_item_list
 %type <block_item> block_item
 %type <expression> expression_statement
-%type <external_declaration> translation_unit
+%type <external_declarations> translation_unit
 %type <external_declaration> external_declaration
 %type <external_declaration> function_definition 
 
@@ -194,7 +194,11 @@ expression_statement
 
 translation_unit
 	: external_declaration
-	{ $$ = $1; }
+	{ $$ = new ast_external_declaration_list();
+		$$->push_back($1); }
+	| translation_unit external_declaration
+	{ $1->push_back($2);
+		$$ = $1; }
 	;
 
 external_declaration

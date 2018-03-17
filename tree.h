@@ -32,6 +32,7 @@ class ast_compound_statement;
 class ast_expression_statement;
 
 class ast_external_declaration;
+typedef std::list<ast_external_declaration*> ast_external_declaration_list;
 class ast_function_definition;          // subclass of ast_external_declaration
 
 std::ostream& pad(int d, std::ostream& s);
@@ -56,10 +57,11 @@ public:
 };
 
 class ast_program : public ast_struct {
+    typedef ast_external_declaration_list::iterator ListI;
 private:
-    ast_external_declaration* external_declaration;
+    ast_external_declaration_list* external_declarations;
 public:
-    ast_program(ast_external_declaration* external_declaration);
+    ast_program(ast_external_declaration_list* external_declarations);
     std::ostream& print_struct(int d, std::ostream& s);
     void CodeGen();
 };

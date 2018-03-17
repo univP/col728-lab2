@@ -6,8 +6,12 @@
 // direct declarator
 //      identifier, parameter list
 
-int main(int x, int y) {
-    x;
+int main() {
     ((12.0f));
-    int x, y, z;
+    0;
+}
+
+int main() {
+    ((12.0f));
+    0;
 }
