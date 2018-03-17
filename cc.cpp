@@ -52,7 +52,17 @@ main(int argc, char **argv)
         program->print_struct(0, std::cerr);
     }
 
+    program->CodeGen();
+
     exit(0);
+}
+
+void ast_program::CodeGen() {
+    CodeGenContext* context = new CodeGenContext();
+    context->module = llvm::make_unique<llvm::Module>("my cool jit",
+        context->llvm_context);
+    external_declaration->CodeGen(context);
+    context->module->print(llvm::errs(), nullptr);
 }
 
 llvm::Value* ast_identifier_expression::CodeGen(CodeGenContext* context) {
@@ -138,6 +148,56 @@ llvm::Function* ast_function_declarator::get_function(llvm::Type* return_type,
     llvm::Function* function = llvm::Function::Create(function_type,
         llvm::Function::ExternalLinkage, *function_name, context->module.get());
 
+    ListI lit = parameter_declarations->begin();
+
+    for (auto& farg : function->args()) {
+        Arg* arg = (*lit)->get_arg();
+        farg.setName(*(arg->get_arg_name()));
+        lit++;
+    }
+
+    return function;
+}
+
+llvm::Value* ast_declaration::CodeGen(CodeGenContext* context) {
+    // allocate vars and add to symbol table
+    return NULL;
+}
+
+llvm::Value* ast_compound_statement::CodeGen(CodeGenContext* context) {
+    llvm::Value* last_value = NULL;
+    
+    for (ListI lit = block_items->begin(); lit != block_items->end();
+            lit++) {
+        last_value = (*lit)->CodeGen(context);
+    }
+
+    return last_value;
+}
+
+llvm::Value* ast_expression_statement::CodeGen(CodeGenContext* context) {
+    return expression->CodeGen(context);
+}
+
+llvm::Function* ast_function_definition::CodeGen(CodeGenContext* context) {
+    llvm::IRBuilder<> builder(context->llvm_context);
+    llvm::Type* return_type = get_llvm_type(type_specifier->get_type_specifier(),
+        context);
+    llvm::Function* function = declarator->get_function(return_type, context);
+    llvm::BasicBlock* basic_block = llvm::BasicBlock::Create(
+        context->llvm_context, "entry", function);
+    builder.SetInsertPoint(basic_block);
+    context->named_values.enter_scope();
+
+    for (auto& farg : function->args()) {
+        context->named_values.insert(id_table.add_string(farg.getName()),
+            &farg);
+    }
+
+    llvm::Value* ret_val = compound_statement->CodeGen(context);
+    builder.CreateRet(ret_val);
+    llvm::verifyFunction(*function);
+    context->named_values.exit_scope();
     return function;
 }
 
