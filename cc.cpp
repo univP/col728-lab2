@@ -34,6 +34,11 @@ Symbol
     Undefined = id_table.add_string(".undefined"),
     No_type = id_table.add_string(".no_type");
 
+llvm::LLVMContext llvm_context;
+llvm::IRBuilder<> builder(llvm_context);
+std::unique_ptr<llvm::Module> module;
+SymTable<Symbol, llvm::Value> named_values;
+
 int
 main(int argc, char **argv)
 {
@@ -62,35 +67,46 @@ main(int argc, char **argv)
 `------------------------------*/
 
 void ast_program::CodeGen() {
-    CodeGenContext* context = new CodeGenContext();
-    context->module = llvm::make_unique<llvm::Module>("my cool jit",
-        context->llvm_context);
+    named_values.enter_scope();
+    module = llvm::make_unique<llvm::Module>("my cool jit",
+        llvm_context);
 
     for (ListI lit = external_declarations->begin(); 
             lit != external_declarations->end(); lit++) {
-        (*lit)->CodeGen(context);
+        (*lit)->CodeGen();
     }
     
-    context->module->print(llvm::errs(), nullptr);
+    module->print(llvm::errs(), nullptr);
+    named_values.exit_scope();
 }
 
-llvm::Value* ast_identifier_expression::CodeGen(CodeGenContext* context) {
-    llvm::Value* value = context->named_values.lookup(identifier);
+void ast_external_declaration::CodeGen() {
+    if (index == 0) {
+        data.declaration->CodeGenGlobal();
+    } else if (index == 1) {
+        data.function_definition->CodeGen();
+    } else {
+        assert(0);
+    }
+}
+
+llvm::Value* ast_identifier_expression::CodeGen() {
+    llvm::Value* value = named_values.lookup(identifier);
     return value;
 }
 
-llvm::Value* ast_i_constant::CodeGen(CodeGenContext* context) {
+llvm::Value* ast_i_constant::CodeGen() {
     int val = atoi(i_constant->c_str());
-    return llvm::ConstantInt::get(context->llvm_context, 
+    return llvm::ConstantInt::get(llvm_context, 
         llvm::APInt(32, val, true));
 }
 
-llvm::Value* ast_f_constant::CodeGen(CodeGenContext* context) {
+llvm::Value* ast_f_constant::CodeGen() {
     double val = atof(f_constant->c_str());
-    return llvm::ConstantFP::get(context->llvm_context, llvm::APFloat(val));
+    return llvm::ConstantFP::get(llvm_context, llvm::APFloat(val));
 }
 
-llvm::Value* ast_no_expression::CodeGen(CodeGenContext* context) {
+llvm::Value* ast_no_expression::CodeGen() {
     return NULL;
 }
 
@@ -123,39 +139,34 @@ Symbol ast_function_declarator::get_identifier() {
     return NULL;
 }
 
-llvm::Function* ast_identifier_declarator::get_function(llvm::Type* return_type,
-        CodeGenContext* context) {
+llvm::Function* ast_identifier_declarator::get_function(llvm::Type* return_type) {
     return NULL;
 }
 
-llvm::Type* get_llvm_type(Symbol type_specifier, CodeGenContext* context) {
+llvm::Type* get_llvm_type(Symbol type_specifier) {
     if (type_specifier == Int) {
-        return llvm::Type::getInt32Ty(context->llvm_context);
+        return llvm::Type::getInt32Ty(llvm_context);
     } else if (type_specifier == Float) {
-        return llvm::Type::getFloatTy(context->llvm_context);
+        return llvm::Type::getFloatTy(llvm_context);
     }
 
     return NULL;
 }
 
-llvm::Function* ast_function_declarator::get_function(llvm::Type* return_type,
-        CodeGenContext* context) {
-    Symbol function_name = direct_declarator->get_identifier();
-    assert(function_name != NULL);
+llvm::Function* ast_function_declarator::get_function(llvm::Type* return_type) {
     std::vector<llvm::Type*> param_types;
 
     for (ListI lit = parameter_declarations->begin(); 
             lit != parameter_declarations->end(); lit++) {
         Arg* arg = (*lit)->get_arg();
-        param_types.push_back(get_llvm_type(arg->get_type_specifier(),
-            context));
+        param_types.push_back(get_llvm_type(arg->get_type_specifier()));
     }
 
     llvm::FunctionType* function_type = llvm::FunctionType::get(return_type,
         param_types, false);
 
     llvm::Function* function = llvm::Function::Create(function_type,
-        llvm::Function::ExternalLinkage, *function_name, context->module.get());
+        llvm::Function::ExternalLinkage, *identifier, module.get());
 
     ListI lit = parameter_declarations->begin();
 
@@ -168,46 +179,59 @@ llvm::Function* ast_function_declarator::get_function(llvm::Type* return_type,
     return function;
 }
 
-llvm::Value* ast_declaration::CodeGen(CodeGenContext* context) {
-    // allocate vars and add to symbol table
-    return NULL;
+void ast_declaration::CodeGenGlobal() {
+    
 }
 
-llvm::Value* ast_compound_statement::CodeGen(CodeGenContext* context) {
+void ast_declaration::CodeGenLocal() {
+
+}
+
+llvm::Value* ast_compound_statement::CodeGen() {
     llvm::Value* last_value = NULL;
     
     for (ListI lit = block_items->begin(); lit != block_items->end();
             lit++) {
-        last_value = (*lit)->CodeGen(context);
+        last_value = (*lit)->CodeGen();
     }
 
     return last_value;
 }
 
-llvm::Value* ast_expression_statement::CodeGen(CodeGenContext* context) {
-    return expression->CodeGen(context);
+llvm::Value* ast_expression_statement::CodeGen() {
+    return expression->CodeGen();
 }
 
-llvm::Function* ast_function_definition::CodeGen(CodeGenContext* context) {
-    llvm::IRBuilder<> builder(context->llvm_context);
-    llvm::Type* return_type = get_llvm_type(type_specifier->get_type_specifier(),
-        context);
-    llvm::Function* function = declarator->get_function(return_type, context);
+llvm::Function* ast_function_definition::CodeGen() {
+    llvm::Type* return_type = get_llvm_type(type_specifier->get_type_specifier());
+    llvm::Function* function = declarator->get_function(return_type);
     llvm::BasicBlock* basic_block = llvm::BasicBlock::Create(
-        context->llvm_context, "entry", function);
+        llvm_context, "entry", function);
     builder.SetInsertPoint(basic_block);
-    context->named_values.enter_scope();
+    named_values.enter_scope();
 
     for (auto& farg : function->args()) {
-        context->named_values.insert(id_table.add_string(farg.getName()),
+        named_values.insert(id_table.add_string(farg.getName()),
             &farg);
     }
 
-    llvm::Value* ret_val = compound_statement->CodeGen(context);
+    llvm::Value* ret_val = compound_statement->CodeGen();
     builder.CreateRet(ret_val);
     llvm::verifyFunction(*function);
-    context->named_values.exit_scope();
+    named_values.exit_scope();
     return function;
+}
+
+llvm::Value* ast_block_item::CodeGen() {
+    if (index == 0) {
+        data.declaration->CodeGenLocal();
+        return NULL;
+    } else if (index == 1) {
+        return data.statement->CodeGen();
+    }
+
+    assert(0);
+    return NULL;
 }
 
 /*------------------------------------------------------.
@@ -278,7 +302,7 @@ std::ostream& ast_identifier_declarator::print_struct(int d, std::ostream& s) {
 
 std::ostream& ast_function_declarator::print_struct(int d, std::ostream& s) {
     pad(d, s) << ".function_declarator" << std::endl;
-    direct_declarator->print_struct(d+1, s);
+    pad(d+1,s) << *identifier << std::endl;
 
     for (ListI lit = parameter_declarations->begin(); 
             lit != parameter_declarations->end(); lit++) {
@@ -326,6 +350,30 @@ std::ostream& ast_function_definition::print_struct(int d, std::ostream& s) {
     return s;
 }
 
+std::ostream& ast_block_item::print_struct(int d, std::ostream& s) {
+    pad(d, s) << ".function_definition" << std::endl;
+
+    if (index == 0) {
+        data.declaration->print_struct(d+1, s);
+    } else if (index == 1) {
+        data.statement->print_struct(d+1, s);
+    }
+
+    return s;
+}
+
+std::ostream& ast_external_declaration::print_struct(int d, std::ostream& s) {
+    pad(d, s) << ".function_definition" << std::endl;
+
+    if (index == 0) {
+        data.declaration->print_struct(d+1, s);
+    } else if (index == 1) {
+        data.function_definition->print_struct(d+1, s);
+    }
+
+    return s;
+}
+
 /*---------------------------------------------------.
 |   Section 2 : Contructors of tree nodes in AST.    |
 `---------------------------------------------------*/
@@ -362,12 +410,6 @@ ast_init_declarator::ast_init_declarator(ast_declarator* declarator)
 ast_identifier_declarator::ast_identifier_declarator(Symbol identifier)
     : identifier(identifier) {}
 
-ast_function_declarator::ast_function_declarator(
-        ast_direct_declarator* direct_declarator,
-        ast_parameter_declaration_list* parameter_declarations)
-    : direct_declarator(direct_declarator),
-        parameter_declarations(parameter_declarations) {}
-
 ast_parameter_declaration::ast_parameter_declaration(
         ast_type_specifier* type_specifier,
         ast_declarator* declarator)
@@ -391,6 +433,41 @@ ast_function_definition::ast_function_definition(
 ast_no_expression::ast_no_expression() {
     set_type(Undefined);
 }
+
+ast_block_item::ast_block_item(ast_declaration* declaration) {
+    data.declaration = declaration;
+    index = 0;
+}
+
+ast_block_item::ast_block_item(ast_statement* statement) {
+    data.statement = statement;
+    index = 1;
+}
+
+int ast_block_item::get_index() {
+    return index;
+}
+
+ast_external_declaration::ast_external_declaration(
+        ast_declaration* declaration) {
+    data.declaration = declaration;
+    index = 0;
+}
+
+ast_external_declaration::ast_external_declaration(ast_function_definition* 
+        function_definition) {
+    data.function_definition = function_definition;
+    index = 1;
+}
+
+int ast_external_declaration::get_index() {
+    return index;
+}
+
+ast_function_declarator::ast_function_declarator(Symbol identifier,
+        ast_parameter_declaration_list* parameter_declarations)
+        : identifier(identifier), 
+        parameter_declarations(parameter_declarations) {}
 
 std::ostream& pad(int d, std::ostream& s) {
     assert(d >= 0);

@@ -7,6 +7,7 @@ union YYSTYPE {
 	ast_program* program;
 	ast_expression* expression;
 	ast_block_item* block_item;
+	ast_declaration* declaration;
 	ast_type_specifier* type_specifier;
 	ast_init_declarator_list* init_declarators;
 	ast_init_declarator* init_declarator;
@@ -18,6 +19,8 @@ union YYSTYPE {
 	ast_block_item_list* block_items;
 	ast_external_declaration* external_declaration;
 	ast_external_declaration_list* external_declarations;
+	ast_function_definition* function_definition;
+	ast_statement* statement;
     Symbol symbol;
 };
 

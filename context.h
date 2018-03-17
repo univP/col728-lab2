@@ -3,12 +3,9 @@
 
 #include "symtab.h"
 
-class CodeGenContext {
-public:
-    llvm::LLVMContext llvm_context;
-    // llvm::IRBuilder<> builder(llvm_context);
-    std::unique_ptr<llvm::Module> module;
-    SymTable<Symbol, llvm::Value> named_values;
-};
+extern llvm::LLVMContext llvm_context;
+extern llvm::IRBuilder<> builder;
+extern std::unique_ptr<llvm::Module> module;
+extern SymTable<Symbol, llvm::Value> named_values;
 
 #endif

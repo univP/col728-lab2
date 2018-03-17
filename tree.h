@@ -72,7 +72,7 @@ private:
 public:
     Symbol get_type();
     void set_type(Symbol type);
-    virtual llvm::Value* CodeGen(CodeGenContext* context) = 0;
+    virtual llvm::Value* CodeGen() = 0;
 };
 
 class ast_identifier_expression : public ast_expression {
@@ -81,7 +81,7 @@ private:
 public:
     ast_identifier_expression(Symbol identifier);
     std::ostream& print_struct(int d, std::ostream& s);
-    llvm::Value* CodeGen(CodeGenContext* context);
+    llvm::Value* CodeGen();
 };
 
 class ast_i_constant : public ast_expression {
@@ -90,7 +90,7 @@ private:
 public:
     ast_i_constant(Symbol i_constant);
     std::ostream& print_struct(int d, std::ostream& s);
-    llvm::Value* CodeGen(CodeGenContext* context);
+    llvm::Value* CodeGen();
 };
 
 class ast_f_constant : public ast_expression {
@@ -99,15 +99,25 @@ private:
 public:
     ast_f_constant(Symbol f_constant);
     std::ostream& print_struct(int d, std::ostream& s);
-    llvm::Value* CodeGen(CodeGenContext* context);
+    llvm::Value* CodeGen();
 };
 
 class ast_block_item : public ast_struct {
+private:
+    int index;
+    union {
+        ast_declaration* declaration;
+        ast_statement* statement;
+    } data;
 public:
-    virtual llvm::Value* CodeGen(CodeGenContext* context) = 0;
+    ast_block_item(ast_declaration* declaration);
+    ast_block_item(ast_statement* statement);
+    int get_index();
+    std::ostream& print_struct(int d, std::ostream& s);
+    llvm::Value* CodeGen();
 };
 
-class ast_declaration : public ast_block_item {
+class ast_declaration : public ast_struct {
     typedef ast_init_declarator_list::iterator ListI;
 private:
     ast_type_specifier* type_specifier;
@@ -116,7 +126,8 @@ public:
     ast_declaration(ast_type_specifier* type_specifier,
         ast_init_declarator_list* init_declarators);
     std::ostream& print_struct(int d, std::ostream& s);
-    llvm::Value* CodeGen(CodeGenContext* context);
+    void CodeGenGlobal();
+    void CodeGenLocal();
 };
 
 class ast_type_specifier : public ast_struct {
@@ -139,8 +150,7 @@ public:
 class ast_declarator : public ast_struct {
 public:
     virtual Symbol get_identifier() = 0;
-    virtual llvm::Function* get_function(llvm::Type* return_type, 
-        CodeGenContext* context) = 0;
+    virtual llvm::Function* get_function(llvm::Type* return_type) = 0;
 };
 
 class ast_direct_declarator : public ast_declarator {
@@ -154,22 +164,20 @@ public:
     ast_identifier_declarator(Symbol identifier);
     std::ostream& print_struct(int d, std::ostream& s);
     Symbol get_identifier();
-    llvm::Function* get_function(llvm::Type* return_type, 
-        CodeGenContext* context);
+    llvm::Function* get_function(llvm::Type* return_type);
 };
 
 class ast_function_declarator : public ast_direct_declarator {
     typedef ast_parameter_declaration_list::iterator ListI;
 private:
-    ast_direct_declarator* direct_declarator;
+    Symbol identifier;
     ast_parameter_declaration_list* parameter_declarations;
 public:
-    ast_function_declarator(ast_direct_declarator* direct_declarator,
+    ast_function_declarator(Symbol identifier,
         ast_parameter_declaration_list* parameter_declarations);
     std::ostream& print_struct(int d, std::ostream& s);
     Symbol get_identifier();
-    llvm::Function* get_function(llvm::Type* return_type, 
-        CodeGenContext* context);
+    llvm::Function* get_function(llvm::Type* return_type);
 };
 
 class ast_parameter_declaration : public ast_struct {
@@ -183,8 +191,9 @@ public:
     Arg* get_arg();
 };
 
-class ast_statement : public ast_block_item {
-
+class ast_statement : public ast_struct {
+public:
+    virtual llvm::Value* CodeGen() = 0;
 };
 
 class ast_compound_statement : public ast_statement {
@@ -194,7 +203,7 @@ private:
 public:
     ast_compound_statement(ast_block_item_list* block_items);
     std::ostream& print_struct(int d, std::ostream& s);
-    llvm::Value* CodeGen(CodeGenContext* context);
+    llvm::Value* CodeGen();
 };
 
 class ast_expression_statement : public ast_statement {
@@ -203,22 +212,32 @@ private:
 public:
     ast_expression_statement(ast_expression* expression);
     std::ostream& print_struct(int d, std::ostream& s);
-    llvm::Value* CodeGen(CodeGenContext* context);
+    llvm::Value* CodeGen();
 };
 
 class ast_no_expression : public ast_expression {
 public:
     ast_no_expression();
     std::ostream& print_struct(int d, std::ostream& s);
-    llvm::Value* CodeGen(CodeGenContext* context);
+    llvm::Value* CodeGen();
 };
 
 class ast_external_declaration : public ast_struct {
+private:
+    int index;
+    union {
+        ast_declaration* declaration;
+        ast_function_definition* function_definition;
+    } data;
 public:
-    virtual llvm::Function* CodeGen(CodeGenContext* context) = 0; 
+    ast_external_declaration(ast_declaration* declaration);
+    ast_external_declaration(ast_function_definition* function_definition);
+    int get_index();
+    void CodeGen();
+    std::ostream& print_struct(int d, std::ostream& s);
 };
 
-class ast_function_definition : public ast_external_declaration {
+class ast_function_definition : public ast_struct {
 private:
     ast_type_specifier* type_specifier;
     ast_declarator* declarator;
@@ -228,7 +247,7 @@ public:
         ast_declarator* declarator,
         ast_compound_statement* compound_statement);
     std::ostream& print_struct(int d, std::ostream& s);
-    llvm::Function* CodeGen(CodeGenContext* context);
+    llvm::Function* CodeGen();
 };
 
 

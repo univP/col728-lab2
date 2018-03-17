@@ -21,7 +21,7 @@ ast_program* program;
 %type <expression> primary_expression
 %type <expression> constant
 %type <expression> expression
-%type <block_item> declaration
+%type <declaration> declaration
 %type <type_specifier>	declaration_specifiers
 %type <init_declarators> init_declarator_list
 %type <init_declarator> init_declarator
@@ -31,14 +31,14 @@ ast_program* program;
 %type <parameter_declarations> parameter_type_list
 %type <parameter_declarations> parameter_list
 %type <parameter_declaration> parameter_declaration
-%type <block_item> statement
+%type <statement> statement
 %type <compound_statement> compound_statement
 %type <block_items> block_item_list
 %type <block_item> block_item
 %type <expression> expression_statement
 %type <external_declarations> translation_unit
 %type <external_declaration> external_declaration
-%type <external_declaration> function_definition 
+%type <function_definition> function_definition 
 
 %token	<symbol> IDENTIFIER I_CONSTANT F_CONSTANT 
 %token 	STRING_LITERAL FUNC_NAME SIZEOF
@@ -130,9 +130,9 @@ declarator
 direct_declarator
 	: IDENTIFIER
 	{ $$ = new ast_identifier_declarator($1); }
-	| direct_declarator '(' parameter_type_list ')'
+	| IDENTIFIER '(' parameter_type_list ')'
 	{ $$ = new ast_function_declarator($1, $3); }
-	| direct_declarator '(' ')'
+	| IDENTIFIER '(' ')'
 	{ $$ = new ast_function_declarator($1, new ast_parameter_declaration_list()); }
 	;
 
@@ -180,9 +180,9 @@ block_item_list
 
 block_item
 	: declaration
-	{ $$ = $1; }
+	{ $$ = new ast_block_item($1); }
 	| statement
-	{ $$ = $1; }
+	{ $$ = new ast_block_item($1); }
 	;
 
 expression_statement
@@ -203,7 +203,9 @@ translation_unit
 
 external_declaration
 	: function_definition
-	{ $$ = $1; }
+	{ $$ = new ast_external_declaration($1); }
+	| declaration
+	{ $$ = new ast_external_declaration($1); }
 	;
 
 function_definition
