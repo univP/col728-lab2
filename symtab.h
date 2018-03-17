@@ -5,10 +5,10 @@
 
 template <class SYM, class DAT>
 class SymTable {
-    typedef std::map<SYM, DAT> Scope;
+    typedef std::map<SYM, DAT*> Scope;
     typedef typename Scope::iterator MapI;
     typedef std::list<Scope*> ScopeList;
-    typedef typename ScopeList::iterator ListI;
+    typedef typename ScopeList::reverse_iterator ListI;
 private:
     ScopeList tbl;
 public:

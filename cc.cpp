@@ -55,6 +55,89 @@ main(int argc, char **argv)
     exit(0);
 }
 
+llvm::Value* ast_identifier_expression::CodeGen(CodeGenContext* context) {
+    llvm::Value* value = context->named_values.lookup(identifier);
+    return value;
+}
+
+llvm::Value* ast_i_constant::CodeGen(CodeGenContext* context) {
+    int val = atoi(i_constant->c_str());
+    return llvm::ConstantInt::get(context->llvm_context, 
+        llvm::APInt(32, val, true));
+}
+
+llvm::Value* ast_f_constant::CodeGen(CodeGenContext* context) {
+    double val = atof(f_constant->c_str());
+    return llvm::ConstantFP::get(context->llvm_context, llvm::APFloat(val));
+}
+
+llvm::Value* ast_no_expression::CodeGen(CodeGenContext* context) {
+    return NULL;
+}
+
+Arg::Arg(Symbol type_specifier, Symbol arg_name): 
+    type_specifier(type_specifier), arg_name(arg_name) {}
+
+Symbol Arg::get_type_specifier() {
+    return type_specifier;
+}
+
+Symbol Arg::get_arg_name() {
+    return arg_name;
+}
+
+Symbol ast_type_specifier::get_type_specifier() {
+    return type_specifier;
+}
+
+Arg* ast_parameter_declaration::get_arg() {
+    assert(declarator->get_identifier() != NULL);
+    return new Arg(type_specifier, declarator->get_identifier());
+}
+
+Symbol ast_identifier_declarator::get_identifier() {
+    return identifier;
+}
+
+Symbol ast_function_declarator::get_identifier() {
+    return NULL;
+}
+
+llvm::Function* ast_identifier_declarator::get_function(llvm::Type* return_type,
+        CodeGenContext* context) {
+    return NULL;
+}
+
+llvm::Type* get_llvm_type(Symbol type_specifier, CodeGenContext* context) {
+    if (type_specifier == Int) {
+        return llvm::Type::getInt32Ty(context);
+    } else if (type_specifier == Float) {
+        return llvm::Type::getFloatTy(context);
+    }
+
+    return NULL;
+}
+
+llvm::Function* ast_function_declarator::get_function(llvm::Type* return_type,
+        CodeGenContext* context) {
+    Symbol function_name = direct_declarator->get_identifier();
+    assert(function_name != NULL);
+    std::vector<llvm::Type*> param_types;
+
+    for (ListI lit = parameter_declarations->begin(); lit; lit++) {
+        param_types.push_back(llvm::Type::get(context->llvm_context,
+            get_llvm_type(lit->get_type_specifier())));
+    }
+
+    llvm::FunctionType* function_type = llvm::FunctionType::get(return_type,
+        param_types, false);
+
+    llvm::Function* function = llvm::Function::Create(function_type,
+        Function::ExternalLinkage, function_name, context->module);
+
+    return function;
+}
+
 /*------------------------------------------------------.
 |   Section 2 : Print AST nodes along with their types. |
 `------------------------------------------------------*/
@@ -108,6 +191,7 @@ std::ostream& ast_type_specifier::print_struct(int d, std::ostream& s) {
 std::ostream& ast_init_declarator::print_struct(int d, std::ostream& s) {
     pad(d, s) << ".init_declarator" << std::endl;
     declarator->print_struct(d+1, s);
+    return s;
 }
 
 std::ostream& ast_identifier_declarator::print_struct(int d, std::ostream& s) {
@@ -132,6 +216,7 @@ std::ostream& ast_parameter_declaration::print_struct(int d, std::ostream& s) {
     pad(d, s) << ".parameter_declaration" << std::endl;
     type_specifier->print_struct(d+1, s);
     declarator->print_struct(d+1, s);
+    return s;
 }
 
 std::ostream& ast_compound_statement::print_struct(int d, std::ostream& s) {

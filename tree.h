@@ -1,7 +1,7 @@
 #ifndef TREE_H
 #define TREE_H
 
-#include "symtab.h"
+#include "context.h"
 
 // Forward declarations
 class ast_struct;
@@ -37,6 +37,19 @@ class ast_function_definition;          // subclass of ast_external_declaration
 std::ostream& pad(int d, std::ostream& s);
 
 // Class definitions
+
+class Arg {
+private:
+    Symbol type_specifier;
+    Symbol arg_name;
+public:
+    Arg(Symbol type_specifier, Symbol arg_name);
+    Symbol get_type_specifier();
+    Symbol get_arg_name();
+};
+
+typedef list<Arg> Args;
+
 class ast_struct {
 public:
     virtual std::ostream& print_struct(int d, std::ostream& s) = 0;
@@ -56,6 +69,7 @@ private:
 public:
     Symbol get_type();
     void set_type(Symbol type);
+    virtual llvm::Value* CodeGen(CodeGenContext* context) = 0;
 };
 
 class ast_identifier_expression : public ast_expression {
@@ -64,6 +78,7 @@ private:
 public:
     ast_identifier_expression(Symbol identifier);
     std::ostream& print_struct(int d, std::ostream& s);
+    llvm::Value* CodeGen(CodeGenContext* context);
 };
 
 class ast_i_constant : public ast_expression {
@@ -72,6 +87,7 @@ private:
 public:
     ast_i_constant(Symbol i_constant);
     std::ostream& print_struct(int d, std::ostream& s);
+    llvm::Value* CodeGen(CodeGenContext* context);
 };
 
 class ast_f_constant : public ast_expression {
@@ -80,6 +96,7 @@ private:
 public:
     ast_f_constant(Symbol f_constant);
     std::ostream& print_struct(int d, std::ostream& s);
+    llvm::Value* CodeGen(CodeGenContext* context);
 };
 
 class ast_block_item : public ast_struct {
@@ -103,6 +120,7 @@ private:
 public:
     ast_type_specifier(Symbol type_specifier);
     std::ostream& print_struct(int d, std::ostream& s);
+    Symbol get_type_specifier();
 };
 
 class ast_init_declarator : public ast_struct {
@@ -114,7 +132,10 @@ public:
 };
 
 class ast_declarator : public ast_struct {
-
+public:
+    virtual Symbol get_identifier() = 0;
+    virtual llvm::Function* get_function(llvm::Type* return_type, 
+        CodeGenContext* context) = 0;
 };
 
 class ast_direct_declarator : public ast_declarator {
@@ -127,6 +148,9 @@ private:
 public:
     ast_identifier_declarator(Symbol identifier);
     std::ostream& print_struct(int d, std::ostream& s);
+    Symbol get_identifier();
+    llvm::Function* get_function(llvm::Type* return_type, 
+        CodeGenContext* context);
 };
 
 class ast_function_declarator : public ast_direct_declarator {
@@ -134,10 +158,14 @@ class ast_function_declarator : public ast_direct_declarator {
 private:
     ast_direct_declarator* direct_declarator;
     ast_parameter_declaration_list* parameter_declarations;
+    typedef ast_parameter_declaration_list::iterator ListI;
 public:
     ast_function_declarator(ast_direct_declarator* direct_declarator,
         ast_parameter_declaration_list* parameter_declarations);
     std::ostream& print_struct(int d, std::ostream& s);
+    Symbol get_identifier();
+    llvm::Function* get_function(llvm::Type* return_type, 
+        CodeGenContext* context);
 };
 
 class ast_parameter_declaration : public ast_struct {
@@ -148,6 +176,7 @@ public:
     ast_parameter_declaration(ast_type_specifier* type_specifier,
         ast_declarator* declarator);
     std::ostream& print_struct(int d, std::ostream& s);
+    Arg* get_arg();
 };
 
 class ast_statement : public ast_block_item {
@@ -161,6 +190,7 @@ private:
 public:
     ast_compound_statement(ast_block_item_list* block_items);
     std::ostream& print_struct(int d, std::ostream& s);
+    llvm::Value* CodeGen(CodeGenContext* context);
 };
 
 class ast_expression_statement : public ast_statement {
@@ -175,6 +205,7 @@ class ast_no_expression : public ast_expression {
 public:
     ast_no_expression();
     std::ostream& print_struct(int d, std::ostream& s);
+    llvm::Value* CodeGen(CodeGenContext* context);
 };
 
 class ast_external_declaration : public ast_struct {
@@ -191,6 +222,7 @@ public:
         ast_declarator* declarator,
         ast_compound_statement* compound_statement);
     std::ostream& print_struct(int d, std::ostream& s);
+    llvm::Function* CodeGen(CodeGenContext* context);
 };
 
 
