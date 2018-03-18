@@ -9,12 +9,17 @@ int y(int p, float q) {
     p;
 }
 
-int main(int x) {
-    int i,j;
-    i = 12;
-    j = 4;
-    i < j;
-    j <= i;
-    j == i;
+int main(int x) 
+{
+    int i;
+    float j;
+    i=2;
+    j=4.5;
+    if(i==j){
+        i=95;
+    }
+    else{
+        j=94.9;
+    }
     y(i,j);
 }

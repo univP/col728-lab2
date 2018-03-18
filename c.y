@@ -33,6 +33,7 @@ ast_program* program;
 %type <parameter_declaration> parameter_declaration
 %type <statement> statement
 %type <compound_statement> compound_statement
+%type <statement> selection_statement
 %type <block_items> block_item_list
 %type <block_item> block_item
 %type <expression> expression_statement
@@ -242,7 +243,7 @@ statement
 	| expression_statement
 	{ $$ = new ast_expression_statement($1); }
 	| selection_statement
-	{ $$ = NULL; }
+	{ $$ = $1; }
 	;
 
 compound_statement
@@ -277,7 +278,9 @@ expression_statement
 
 selection_statement
 	: IF '(' expression ')' statement ELSE statement
+	{ $$ = new ast_mif_statement($3,$5,$7); }
 	| IF '(' expression ')' statement
+	{ $$ = new ast_uif_statement($3, $5); }
 	;
 
 translation_unit

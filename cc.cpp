@@ -469,7 +469,60 @@ llvm::Value* ast_assign_expression::CodeGen(){
     return e_val;  
 }
 
+llvm::Value* ast_mif_statement::CodeGen(){
+    llvm::Value* cond_val = condition->CodeGen();
+    if(!cond_val)
+        return nullptr;
+    
+    cond_val = builder.CreateICmpNE(cond_val, llvm::ConstantInt::get(llvm_context, 
+        llvm::APInt(32, 0, true)), "mifcond");
+    
+    llvm::Function* function = builder.GetInsertBlock()->getParent();
+    llvm::BasicBlock* then_block = llvm::BasicBlock::Create(llvm_context,
+         "then", function);
+    llvm::BasicBlock* else_block = llvm::BasicBlock::Create(llvm_context, "else");
+    llvm::BasicBlock* merge_block = llvm::BasicBlock::Create(llvm_context, "ifcont");
 
+    builder.CreateCondBr(cond_val, then_block, else_block);
+    builder.SetInsertPoint(then_block);
+    then_statement->CodeGen();
+    
+    builder.CreateBr(merge_block);
+    function->getBasicBlockList().push_back(else_block);
+    builder.SetInsertPoint(else_block);
+    else_statement->CodeGen();
+    builder.CreateBr(merge_block);
+    function->getBasicBlockList().push_back(merge_block);
+    builder.SetInsertPoint(merge_block);
+    
+    return NULL;
+}
+
+llvm::Value* ast_uif_statement::CodeGen(){
+
+    llvm::Value* cond_val = condition->CodeGen();
+    if(!cond_val)
+        return nullptr;
+    
+    cond_val = builder.CreateICmpNE(cond_val, llvm::ConstantInt::get(llvm_context, 
+        llvm::APInt(32, 0, true)), "uifcond");
+    
+    llvm::Function* function = builder.GetInsertBlock()->getParent();
+    llvm::BasicBlock* then_block = llvm::BasicBlock::Create(llvm_context,
+         "then", function);
+    llvm::BasicBlock* merge_block = llvm::BasicBlock::Create(llvm_context, "ifcont");
+
+    builder.CreateCondBr(cond_val, then_block, merge_block);
+    builder.SetInsertPoint(then_block);
+    then_statement->CodeGen();
+    
+    builder.CreateBr(merge_block);
+    function->getBasicBlockList().push_back(merge_block);
+    builder.SetInsertPoint(merge_block);
+    
+    return NULL;
+    
+}
 
 
 /*------------------------------------------------------.
@@ -701,6 +754,21 @@ std::ostream& ast_declarator::print_struct(int d, std::ostream& s) {
     return s;
 }
 
+
+std::ostream& ast_mif_statement::print_struct(int d, std::ostream& s) {
+    pad(d, s) << ".mid_statement" << std::endl;
+    condition->print_struct(d+1, s);
+    then_statement->print_struct(d+1, s);
+    else_statement->print_struct(d+1, s);
+    return s;
+}
+
+std::ostream& ast_uif_statement::print_struct(int d, std::ostream& s) {
+    pad(d, s) << ".uid_statement" << std::endl;
+    condition->print_struct(d+1, s);
+    then_statement->print_struct(d+1, s);
+    return s;
+}
 
 /*---------------------------------------------------.
 |   Section 2 : Contructors of tree nodes in AST.    |
