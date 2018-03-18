@@ -21,6 +21,8 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
 
+#define my_assert(e,l,f) if (!(e)) { std::cerr << "Line: "<< l << ", File: " << f << std::endl; exit(1); }
+
 typedef std::string* Symbol;
 
 class StrTable : public std::map<std::string, Symbol> {

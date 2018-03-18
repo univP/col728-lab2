@@ -17,14 +17,14 @@ public:
     }
 
     void exit_scope() {
-        assert(tbl.size());
+        my_assert(tbl.size(), __LINE__, __FILE__);
         tbl.pop_back();
     }
 
     void insert(SYM sym, DAT* dat) {
-        assert(tbl.size());
+        my_assert(tbl.size(), __LINE__, __FILE__);
         Scope* scope = tbl.back();
-        assert(scope->find(sym) == scope->end());
+        my_assert(scope->find(sym) == scope->end(), __LINE__, __FILE__);
         scope->insert(std::make_pair(sym, dat));
     }
     
@@ -42,7 +42,7 @@ public:
     }
 
     DAT* probe(SYM sym) {
-        assert(tbl.size());
+        my_assert(tbl.size(), __LINE__, __FILE__);
         Scope* scope = tbl.back();
         MapI sit = scope->find(sym);
 

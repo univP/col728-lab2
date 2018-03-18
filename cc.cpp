@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
 #include "c.tab.hpp"
 
 extern "C" int yylex();
@@ -37,7 +36,9 @@ Symbol
 llvm::LLVMContext llvm_context;
 llvm::IRBuilder<> builder(llvm_context);
 std::unique_ptr<llvm::Module> module;
-SymTable<Symbol, llvm::Value> named_values;
+SymTable<Symbol, llvm::AllocaInst> named_values;
+SymTable<Symbol, std::string> named_types;
+std::map<Symbol, ast_function_declarator*> fun_decls;
 
 int
 main(int argc, char **argv)
@@ -66,6 +67,30 @@ main(int argc, char **argv)
 |   Section 2 : Code generation |
 `------------------------------*/
 
+llvm::Function* get_function(llvm::Type* type, Symbol function_name) {
+    llvm::Function* function = module->getFunction(*function_name);
+
+    if (function) {
+        return function;
+    }
+
+    std::map<Symbol, ast_function_declarator*>::iterator
+        mit = fun_decls.find(function_name);
+    
+    if (mit != fun_decls.end()) {
+        return mit->second->CodeGenGlobal(type);
+    }
+
+    return NULL;
+}
+
+llvm::AllocaInst* CreateEntryBlockAlloca(llvm::Type* type, 
+        llvm::Function* function, Symbol local_var) {
+    llvm::IRBuilder<> local_builder(&function->getEntryBlock(), 
+        function->getEntryBlock().begin());
+    return local_builder.CreateAlloca(type, nullptr, *local_var);
+}
+
 void ast_program::CodeGen() {
     named_values.enter_scope();
     module = llvm::make_unique<llvm::Module>("my cool jit",
@@ -86,61 +111,36 @@ void ast_external_declaration::CodeGen() {
     } else if (index == 1) {
         data.function_definition->CodeGen();
     } else {
-        assert(0);
+        my_assert(0, __LINE__, __FILE__);
     }
 }
 
 llvm::Value* ast_identifier_expression::CodeGen() {
     llvm::Value* value = named_values.lookup(identifier);
-    return value;
+    set_type(named_types.lookup(identifier));
+    return builder.CreateLoad(value, identifier->c_str());
 }
 
 llvm::Value* ast_i_constant::CodeGen() {
     int val = atoi(i_constant->c_str());
+    set_type(Int);
     return llvm::ConstantInt::get(llvm_context, 
         llvm::APInt(32, val, true));
 }
 
 llvm::Value* ast_f_constant::CodeGen() {
     double val = atof(f_constant->c_str());
+    set_type(Float);
     return llvm::ConstantFP::get(llvm_context, llvm::APFloat(val));
 }
 
 llvm::Value* ast_no_expression::CodeGen() {
+    set_type(Undefined);
     return NULL;
-}
-
-Arg::Arg(Symbol type_specifier, Symbol arg_name): 
-    type_specifier(type_specifier), arg_name(arg_name) {}
-
-Symbol Arg::get_type_specifier() {
-    return type_specifier;
-}
-
-Symbol Arg::get_arg_name() {
-    return arg_name;
 }
 
 Symbol ast_type_specifier::get_type_specifier() {
     return type_specifier;
-}
-
-Arg* ast_parameter_declaration::get_arg() {
-    assert(declarator->get_identifier() != NULL);
-    return new Arg(type_specifier->get_type_specifier(), 
-        declarator->get_identifier());
-}
-
-Symbol ast_identifier_declarator::get_identifier() {
-    return identifier;
-}
-
-Symbol ast_function_declarator::get_identifier() {
-    return NULL;
-}
-
-llvm::Function* ast_identifier_declarator::get_function(llvm::Type* return_type) {
-    return NULL;
 }
 
 llvm::Type* get_llvm_type(Symbol type_specifier) {
@@ -148,53 +148,120 @@ llvm::Type* get_llvm_type(Symbol type_specifier) {
         return llvm::Type::getInt32Ty(llvm_context);
     } else if (type_specifier == Float) {
         return llvm::Type::getFloatTy(llvm_context);
+    } else if (type_specifier == Void) {
+        return NULL;
     }
 
+    my_assert(0, __LINE__, __FILE__);
     return NULL;
 }
 
-llvm::Function* ast_function_declarator::get_function(llvm::Type* return_type) {
-    std::vector<llvm::Type*> param_types;
-
-    for (ListI lit = parameter_declarations->begin(); 
-            lit != parameter_declarations->end(); lit++) {
-        Arg* arg = (*lit)->get_arg();
-        param_types.push_back(get_llvm_type(arg->get_type_specifier()));
+llvm::Value* get_default_value(llvm::Type* type) {
+    if (type->isIntegerTy()) {
+        return llvm::ConstantInt::get(llvm_context, 
+            llvm::APInt(32, 0, true));
+    } else if (type->isFloatTy()) {
+        return llvm::ConstantFP::get(llvm_context, 
+            llvm::APFloat(0.));
     }
 
-    llvm::FunctionType* function_type = llvm::FunctionType::get(return_type,
-        param_types, false);
+    my_assert(0, __LINE__, __FILE__);
+    return NULL;
+}
 
-    llvm::Function* function = llvm::Function::Create(function_type,
-        llvm::Function::ExternalLinkage, *identifier, module.get());
-
-    ListI lit = parameter_declarations->begin();
-
-    for (auto& farg : function->args()) {
-        Arg* arg = (*lit)->get_arg();
-        farg.setName(*(arg->get_arg_name()));
-        lit++;
+Symbol get_symbol_type(llvm::Type* type) {
+    if (type->isIntegerTy()) {
+        return Int;
+    } else if (type->isFloatTy()) {
+        return Float;
     }
 
-    return function;
+    my_assert(0, __LINE__, __FILE__);
+    return NULL;
 }
 
 void ast_declaration::CodeGenGlobal() {
-    
+    llvm::Type* type = get_llvm_type(type_specifier->get_type_specifier());
+
+    for (ListI lit = init_declarators->begin(); 
+            lit != init_declarators->end(); lit++) {
+        (*lit)->CodeGenGlobal(type);
+    }
+}
+
+void ast_init_declarator::CodeGenGlobal(llvm::Type* type) {
+    declarator->CodeGenGlobal(type);
+}
+
+void ast_declarator::CodeGenGlobal(llvm::Type* type) {
+    direct_declarator->CodeGenGlobal(type);
+}
+
+void ast_direct_declarator::CodeGenGlobal(llvm::Type* type) {
+    if (index == 0) {
+        data.identifier_declarator->CodeGenGlobal(type);
+    } else if (index == 1) {
+        data.function_declarator->CodeGenGlobal(type);
+    } else {
+        my_assert(0, __LINE__, __FILE__);
+    }
+}
+
+void ast_identifier_declarator::CodeGenGlobal(llvm::Type* type) {
+    llvm::GlobalVariable* var = new llvm::GlobalVariable(/*Module=*/*module, 
+        /*Type=*/type,
+        /*isConstant=*/false,
+        /*Linkage=*/llvm::GlobalValue::CommonLinkage,
+        /*Initializer=*/0, // has initializer, specified below
+        /*Name=*/identifier->c_str());
+    var->setAlignment(4);
 }
 
 void ast_declaration::CodeGenLocal() {
+    llvm::Type* type = ::get_llvm_type(type_specifier->get_type_specifier());
 
+    for (ListI lit = init_declarators->begin();
+        lit != init_declarators->end(); lit++) {
+            (*lit)->CodeGenLocal(type);
+    }
+}
+
+void ast_init_declarator::CodeGenLocal(llvm::Type* type) {
+    declarator->CodeGenLocal(type);
+}
+
+void ast_declarator::CodeGenLocal(llvm::Type* type) {
+    direct_declarator->CodeGenLocal(type);
+}
+
+void ast_direct_declarator::CodeGenLocal(llvm::Type* type) {
+    if (index == 0) {
+        data.identifier_declarator->CodeGenLocal(type);
+    } else {
+        my_assert(0, __LINE__, __FILE__);
+    }
+}
+
+void ast_identifier_declarator::CodeGenLocal(llvm::Type* type) {
+    llvm::Function* function = builder.GetInsertBlock()->getParent();
+    llvm::AllocaInst* alloca = ::CreateEntryBlockAlloca(type, function, identifier);
+    named_values.insert(identifier,alloca);
+    named_types.insert(identifier, ::get_symbol_type(type));
+    builder.CreateStore(get_default_value(type), alloca);    
 }
 
 llvm::Value* ast_compound_statement::CodeGen() {
-    llvm::Value* last_value = NULL;
-    
+    named_values.enter_scope();
+    named_types.enter_scope();
+
+    llvm::Value* last_value = NULL;    
     for (ListI lit = block_items->begin(); lit != block_items->end();
             lit++) {
         last_value = (*lit)->CodeGen();
     }
 
+    named_values.exit_scope();
+    named_types.exit_scope();
     return last_value;
 }
 
@@ -202,23 +269,64 @@ llvm::Value* ast_expression_statement::CodeGen() {
     return expression->CodeGen();
 }
 
+llvm::Function* ast_function_declarator::CodeGenGlobal(llvm::Type* type){
+    std::vector<llvm::Type*> arg_types;
+    for(ListI lit = parameter_declarations->begin(); 
+        lit!= parameter_declarations->end(); lit++){
+            Symbol type = (*lit)->get_type();
+            arg_types.push_back(::get_llvm_type(type));
+    }
+
+    llvm::FunctionType* function_type = llvm::FunctionType::get(type, 
+        arg_types, false);
+
+    llvm::Function* function = llvm::Function::Create(function_type,
+        llvm::Function::ExternalLinkage, *identifier, module.get());
+
+    ListI lit = parameter_declarations->begin();
+
+    for (auto& Arg : function->args()) {
+        Arg.setName(*(*lit)->get_identifier());
+        lit++;
+    }
+
+    my_assert(function != NULL, __LINE__, __FILE__);
+    return function;
+}
+
 llvm::Function* ast_function_definition::CodeGen() {
-    llvm::Type* return_type = get_llvm_type(type_specifier->get_type_specifier());
-    llvm::Function* function = declarator->get_function(return_type);
+    named_values.enter_scope();
+    named_types.enter_scope();
+
+    ast_function_declarator* fun_decl = declarator->get_fun_decl();
+    fun_decls.insert(make_pair(fun_decl->get_identifier(), fun_decl));
+    Symbol return_type = type_specifier->get_type_specifier();
+    llvm::Function* function = ::get_function(::get_llvm_type(return_type), fun_decl->get_identifier());
+    llvm::FunctionType* function_type = function->getFunctionType();
     llvm::BasicBlock* basic_block = llvm::BasicBlock::Create(
         llvm_context, "entry", function);
     builder.SetInsertPoint(basic_block);
-    named_values.enter_scope();
+
+    unsigned int index = 0;
 
     for (auto& farg : function->args()) {
+        llvm::Type* type = function_type->getParamType(index++);
+        llvm::AllocaInst* alloca = ::CreateEntryBlockAlloca(type, function, 
+            id_table.add_string(farg.getName()));
+        builder.CreateStore(&farg, alloca);
         named_values.insert(id_table.add_string(farg.getName()),
-            &farg);
+            alloca);
+        named_types.insert(id_table.add_string(farg.getName()),
+            ::get_symbol_type(type));
     }
 
     llvm::Value* ret_val = compound_statement->CodeGen();
     builder.CreateRet(ret_val);
     llvm::verifyFunction(*function);
+
     named_values.exit_scope();
+    named_types.exit_scope();
+    
     return function;
 }
 
@@ -230,9 +338,139 @@ llvm::Value* ast_block_item::CodeGen() {
         return data.statement->CodeGen();
     }
 
-    assert(0);
+    my_assert(0, __LINE__, __FILE__);
     return NULL;
 }
+
+llvm::Value* ast_postfix_expression::CodeGen(){
+
+    llvm::Function* function = module->getFunction(*function_name);
+    if(function->arg_size() != arguments->size())
+        my_assert(0, __LINE__, __FILE__);
+
+    std::vector<llvm::Value*> ArgsV;
+    for(argI ait = arguments->begin(); ait!= arguments->end(); ait++){
+        ArgsV.push_back((*ait)->CodeGen());
+    }
+    return builder.CreateCall(function, ArgsV, "calltmp");
+}
+
+llvm::Value* ast_unary_expression::CodeGen(){
+    llvm::Value* value = expression->CodeGen();
+    set_type(Int);
+    if(!value)
+        return NULL;
+   
+    if(unary=='-')
+        return builder.CreateNeg(value);
+    else if(unary=='~')
+        return builder.CreateNot(value);
+    else if(unary=='!')
+        return builder.CreateICmpEQ(value, llvm::ConstantInt::get(llvm_context, 
+            llvm::APInt(32, 0, true)));
+    else
+        return NULL;
+}
+
+llvm::Value* ast_mul_expression::CodeGen(){
+    llvm::Value* e1_eval = e1->CodeGen();
+    llvm::Value* e2_eval = e2->CodeGen();
+
+    if (e1->get_type() == Int && e2->get_type() == Int){
+        set_type(Int);
+        return builder.CreateMul(e1_eval, e2_eval, "multmp");
+    }else {
+        set_type(Float);
+        return builder.CreateFMul(e1_eval, e2_eval, "multmp");
+    }
+}
+
+llvm::Value* ast_add_expression::CodeGen(){
+    llvm::Value* e1_eval = e1->CodeGen();
+    llvm::Value* e2_eval = e2->CodeGen();
+
+    if (e1->get_type() == Int && e2->get_type() == Int){
+        set_type(Int);
+        return builder.CreateAdd(e1_eval, e2_eval, "addtmp");
+    }else {
+        set_type(Float);
+        return builder.CreateFAdd(e1_eval, e2_eval, "addtmp");
+    }
+}
+
+
+llvm::Value* ast_sub_expression::CodeGen(){
+    llvm::Value* e1_eval = e1->CodeGen();
+    llvm::Value* e2_eval = e2->CodeGen();
+
+    if (e1->get_type() == Int && e2->get_type() == Int){
+        set_type(Int);
+        return builder.CreateSub(e1_eval, e2_eval, "subtmp");
+    }else {
+        set_type(Float);
+        return builder.CreateFSub(e1_eval, e2_eval, "subtmp");
+    }
+}
+
+
+llvm::Value* ast_less_expression::CodeGen(){
+    llvm::Value* e1_eval = e1->CodeGen();
+    llvm::Value* e2_eval = e2->CodeGen();
+
+    if (e1->get_type() == Int && e2->get_type() == Int){
+        set_type(Int);
+        return builder.CreateICmpSLT(e1_eval, e2_eval, "lesstmp");
+    }else {
+        set_type(Float);
+        return builder.CreateFCmpOLT(e1_eval, e2_eval, "lesstmp");
+    }
+}
+
+llvm::Value* ast_leq_expression::CodeGen(){
+    llvm::Value* e1_eval = e1->CodeGen();
+    llvm::Value* e2_eval = e2->CodeGen();
+
+    if (e1->get_type() == Int && e2->get_type() == Int){
+        set_type(Int);
+        return builder.CreateICmpSLE(e1_eval, e2_eval, "leqtmp");
+    }else {
+        set_type(Float);
+        return builder.CreateFCmpOLE(e1_eval, e2_eval, "leqtmp");
+    }
+}
+
+
+llvm::Value* ast_eq_expression::CodeGen(){
+    llvm::Value* e1_eval = e1->CodeGen();
+    llvm::Value* e2_eval = e2->CodeGen();
+
+    if (e1->get_type() == Int && e2->get_type() == Int){
+        set_type(Int);
+        return builder.CreateICmpEQ(e1_eval, e2_eval, "eqtmp");
+    }else {
+        set_type(Float);
+        return builder.CreateFCmpOEQ(e1_eval, e2_eval, "eqtmp");
+    }
+}
+
+
+llvm::Value* ast_assign_expression::CodeGen(){
+    
+    llvm::Value* e_val = expression->CodeGen();
+    if(!e_val)
+        return nullptr;
+    
+    llvm::Value* v_address = named_values.lookup(identifier);
+    if(!v_address)
+        return nullptr;
+
+    builder.CreateStore(e_val, v_address); 
+    set_type(named_types.lookup(identifier));
+    return e_val;  
+}
+
+
+
 
 /*------------------------------------------------------.
 |   Section 2 : Print AST nodes along with their types. |
@@ -351,7 +589,7 @@ std::ostream& ast_function_definition::print_struct(int d, std::ostream& s) {
 }
 
 std::ostream& ast_block_item::print_struct(int d, std::ostream& s) {
-    pad(d, s) << ".function_definition" << std::endl;
+    pad(d, s) << ".block_item" << std::endl;
 
     if (index == 0) {
         data.declaration->print_struct(d+1, s);
@@ -363,7 +601,7 @@ std::ostream& ast_block_item::print_struct(int d, std::ostream& s) {
 }
 
 std::ostream& ast_external_declaration::print_struct(int d, std::ostream& s) {
-    pad(d, s) << ".function_definition" << std::endl;
+    pad(d, s) << ".external_declaration" << std::endl;
 
     if (index == 0) {
         data.declaration->print_struct(d+1, s);
@@ -373,6 +611,96 @@ std::ostream& ast_external_declaration::print_struct(int d, std::ostream& s) {
 
     return s;
 }
+
+std::ostream& ast_postfix_expression::print_struct(int d, std::ostream& s) {
+    pad(d, s) << ".post_expression" << std::endl;
+    pad(d+1, s)<<*function_name <<std::endl;
+    for(argI ait = arguments->begin(); ait!= arguments->end(); ait++){
+        (*ait)->print_struct(d+1, s);
+    }     
+    return s;
+}
+
+std::ostream& ast_unary_expression::print_struct(int d, std::ostream& s) {
+    pad(d, s) << ".unary_expression" << std::endl;
+    pad(d+1, s)<<unary <<std::endl;
+    expression->print_struct(d+1, s); 
+    return s;
+}
+
+std::ostream& ast_add_expression::print_struct(int d, std::ostream& s) {
+    pad(d, s) << ".add_expression" << std::endl;
+    e1->print_struct(d+1, s);  
+    e2->print_struct(d+1, s); 
+
+    return s;
+}
+
+std::ostream& ast_sub_expression::print_struct(int d, std::ostream& s) {
+    pad(d, s) << ".sub_expression" << std::endl;
+    e1->print_struct(d+1, s);  
+    e2->print_struct(d+1, s); 
+
+    return s;
+}
+
+std::ostream& ast_mul_expression::print_struct(int d, std::ostream& s) {
+    pad(d, s) << ".multiply_expression" << std::endl;
+    e1->print_struct(d+1, s);  
+    e2->print_struct(d+1, s); 
+    return s;
+}
+
+std::ostream& ast_less_expression::print_struct(int d, std::ostream& s) {
+    pad(d, s) << ".less_expression" << std::endl;
+    e1->print_struct(d+1, s);  
+    e2->print_struct(d+1, s); 
+
+    return s;
+}
+
+std::ostream& ast_leq_expression::print_struct(int d, std::ostream& s) {
+    pad(d, s) << ".leq_expression" << std::endl;
+    e1->print_struct(d+1, s);  
+    e2->print_struct(d+1, s); 
+
+    return s;
+}
+
+std::ostream& ast_eq_expression::print_struct(int d, std::ostream& s) {
+
+    pad(d, s) << ".equality_expression" << std::endl;
+    e1->print_struct(d+1, s);  
+    e2->print_struct(d+1, s);  
+  
+    return s;
+}
+
+std::ostream& ast_assign_expression::print_struct(int d, std::ostream& s) {
+    pad(d, s) << ".assign_expression" << std::endl;
+    pad(d+1, s)<< *identifier <<std::endl;
+    expression->print_struct(d+1, s);   
+    return s;
+}
+
+std::ostream& ast_direct_declarator::print_struct(int d, std::ostream& s) {
+    pad(d, s) << ".direct_declarator" << std::endl;
+
+    if (index == 0) {
+        data.identifier_declarator->print_struct(d+1, s);
+    } else if (index == 1) {
+        data.function_declarator->print_struct(d+1, s);
+    }
+
+    return s;
+}
+
+std::ostream& ast_declarator::print_struct(int d, std::ostream& s) {
+    pad(d, s) << ".declarator" << std::endl;
+    direct_declarator->print_struct(d+1, s);
+    return s;
+}
+
 
 /*---------------------------------------------------.
 |   Section 2 : Contructors of tree nodes in AST.    |
@@ -470,7 +798,7 @@ ast_function_declarator::ast_function_declarator(Symbol identifier,
         parameter_declarations(parameter_declarations) {}
 
 std::ostream& pad(int d, std::ostream& s) {
-    assert(d >= 0);
+    my_assert(d >= 0, __LINE__, __FILE__);
 
     for (int i = 0; i < d; i++) {
         s << '\t';

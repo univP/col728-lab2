@@ -38,7 +38,16 @@ ast_program* program;
 %type <expression> expression_statement
 %type <external_declarations> translation_unit
 %type <external_declaration> external_declaration
-%type <function_definition> function_definition 
+%type <function_definition> function_definition
+%type <expression> postfix_expression
+%type <arguments> argument_expression_list
+%type <expression> unary_expression
+%type <unary> unary_operator
+%type <expression> multiplicative_expression
+%type <expression> additive_expression
+%type <expression> relational_expression
+%type <expression> equality_expression
+%type <expression> assignment_expression
 
 %token	<symbol> IDENTIFIER I_CONSTANT F_CONSTANT 
 %token 	STRING_LITERAL FUNC_NAME SIZEOF
@@ -82,8 +91,79 @@ constant
 	{ $$ = new ast_f_constant($1); }
 	;
 
-expression
+postfix_expression
 	: primary_expression
+	{ $$ = $1; }
+	| IDENTIFIER '(' ')'
+	{ $$ = new ast_postfix_expression($1,new ast_argument_list()); }
+	| IDENTIFIER '(' argument_expression_list ')'
+	{ $$ = new ast_postfix_expression($1, $3); }
+	;
+
+argument_expression_list
+	: assignment_expression
+	{ $$ = new ast_argument_list(); $$->push_back($1);  }
+	| argument_expression_list ',' assignment_expression
+	{ $$ = $1; $$->push_back($3); }
+	;
+
+unary_expression
+	: postfix_expression
+	{ $$ = $1; }
+	| unary_operator primary_expression
+	{ $$ = new ast_unary_expression($1, $2); }
+	;
+
+unary_operator
+	: '~'
+	{ $$ = '~'; }
+	| '-'
+	{ $$ = '-'; }
+	| '!'
+	{ $$ = '!'; }
+	;
+
+multiplicative_expression
+	: unary_expression
+	{ $$ = $1; }
+	| multiplicative_expression '*' unary_expression
+	{ $$ = new ast_mul_expression($1, $3); }
+	;
+
+additive_expression
+	: multiplicative_expression
+	{ $$ = $1; }
+	| additive_expression '+' multiplicative_expression
+	{ $$ = new ast_add_expression($1, $3); }
+	| additive_expression '-' multiplicative_expression
+	{ $$ = new ast_sub_expression($1, $3); }
+	;
+
+relational_expression
+	: additive_expression
+	{ $$ = $1; }
+	| relational_expression '<' additive_expression
+	{ $$ = new ast_less_expression($1, $3); }
+	| relational_expression LE_OP additive_expression
+	{ $$ = new ast_leq_expression($1, $3); }
+	;
+
+equality_expression
+	: relational_expression
+	{ $$ = $1; }
+	| equality_expression EQ_OP relational_expression
+	{ $$ = new ast_eq_expression($1, $3); }
+	;
+
+assignment_expression
+	: equality_expression
+	{ $$ = $1; }
+	| IDENTIFIER '=' assignment_expression
+	{ $$ = new ast_assign_expression($1, $3); }
+	;
+
+expression
+	: assignment_expression
 	{ $$ = $1; }
 	;
 
@@ -124,16 +204,17 @@ type_specifier
 
 declarator
 	: direct_declarator
-	{ $$ = $1; }
+	{ $$ = new ast_declarator($1); }
 	;
 
 direct_declarator
 	: IDENTIFIER
-	{ $$ = new ast_identifier_declarator($1); }
+	{ $$ = new ast_direct_declarator(new ast_identifier_declarator($1)); }
 	| IDENTIFIER '(' parameter_type_list ')'
-	{ $$ = new ast_function_declarator($1, $3); }
+	{ $$ = new ast_direct_declarator(new ast_function_declarator($1, $3)); }
 	| IDENTIFIER '(' ')'
-	{ $$ = new ast_function_declarator($1, new ast_parameter_declaration_list()); }
+	{ $$ = new ast_direct_declarator(new ast_function_declarator(
+		$1, new ast_parameter_declaration_list())); }
 	;
 
 parameter_type_list
@@ -160,6 +241,8 @@ statement
 	{ $$ = $1; }
 	| expression_statement
 	{ $$ = new ast_expression_statement($1); }
+	| selection_statement
+	{ $$ = NULL; }
 	;
 
 compound_statement
@@ -190,6 +273,11 @@ expression_statement
 	{ $$ = new ast_no_expression(); }
 	| expression ';'
 	{ $$ = $1; }
+	;
+
+selection_statement
+	: IF '(' expression ')' statement ELSE statement
+	| IF '(' expression ')' statement
 	;
 
 translation_unit

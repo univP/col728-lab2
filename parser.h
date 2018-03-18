@@ -1,7 +1,7 @@
 #ifndef PARSE_H
 #define PARSE_H
 
-#include "tree.h"
+#include "context.h"
 
 union YYSTYPE {
 	ast_program* program;
@@ -22,6 +22,8 @@ union YYSTYPE {
 	ast_function_definition* function_definition;
 	ast_statement* statement;
     Symbol symbol;
+	ast_argument_list* arguments;
+	char unary;
 };
 
 extern YYSTYPE yylval;

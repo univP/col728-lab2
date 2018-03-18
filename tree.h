@@ -1,7 +1,7 @@
 #ifndef TREE_H
 #define TREE_H
 
-#include "context.h"
+#include "symtab.h"
 
 // Forward declarations
 class ast_struct;
@@ -11,6 +11,15 @@ class ast_expression;                   // Subclasses of ast_expression below
 class ast_identifier_expression;  
 class ast_i_constant;
 class ast_f_constant;
+class ast_unary_expression;
+class ast_mul_expression;
+class ast_add_expression;
+class ast_sub_expression;
+class ast_less_expression;
+class ast_leq_expression;
+class ast_assign_expression;
+class ast_postfix_expression;
+typedef std::list<ast_expression*> ast_argument_list;
 class ast_no_expression;
 
 class ast_block_item;
@@ -38,18 +47,6 @@ class ast_function_definition;          // subclass of ast_external_declaration
 std::ostream& pad(int d, std::ostream& s);
 
 // Class definitions
-
-class Arg {
-private:
-    Symbol type_specifier;
-    Symbol arg_name;
-public:
-    Arg(Symbol type_specifier, Symbol arg_name);
-    Symbol get_type_specifier();
-    Symbol get_arg_name();
-};
-
-typedef std::list<Arg> Args;
 
 class ast_struct {
 public:
@@ -102,6 +99,102 @@ public:
     llvm::Value* CodeGen();
 };
 
+class ast_postfix_expression : public ast_expression {
+    typedef ast_argument_list::iterator argI;
+private:
+    Symbol function_name;
+    ast_argument_list* arguments;
+public:
+    ast_postfix_expression(Symbol function_name, ast_argument_list* arguments):
+        function_name(function_name), arguments(arguments) {}
+    std::ostream& print_struct(int d, std::ostream& s);
+    llvm::Value* CodeGen();
+};
+
+class ast_unary_expression : public ast_expression {
+private:
+    char unary;
+    ast_expression* expression;
+public:
+    ast_unary_expression(char unary, 
+        ast_expression* expression): unary(unary), expression(expression) {}
+    std::ostream& print_struct(int d, std::ostream& s);
+    llvm::Value* CodeGen();
+};
+
+class ast_mul_expression : public ast_expression {
+private:
+    ast_expression *e1, *e2;
+public:
+    ast_mul_expression(ast_expression* e1, ast_expression* e2)
+        : e1(e1), e2(e2) {}
+    std::ostream& print_struct(int d, std::ostream& s);
+    llvm::Value* CodeGen();
+};
+
+class ast_add_expression : public ast_expression {
+private:
+    ast_expression *e1, *e2;
+public:
+    ast_add_expression(ast_expression* e1, ast_expression* e2)
+        : e1(e1), e2(e2) {}
+    std::ostream& print_struct(int d, std::ostream& s);
+    llvm::Value* CodeGen();
+};
+
+class ast_sub_expression : public ast_expression {
+private:
+    ast_expression *e1, *e2;
+
+public:
+    ast_sub_expression(ast_expression* e1, ast_expression* e2)
+        : e1(e1), e2(e2) {}
+    std::ostream& print_struct(int d, std::ostream& s);
+    llvm::Value* CodeGen();
+};
+
+class ast_less_expression : public ast_expression {
+private:
+    ast_expression *e1, *e2;
+public:
+    ast_less_expression(ast_expression* e1, ast_expression* e2)
+        : e1(e1), e2(e2) {}
+    std::ostream& print_struct(int d, std::ostream& s);
+    llvm::Value* CodeGen();
+};
+
+class ast_leq_expression : public ast_expression {
+private:
+    ast_expression *e1, *e2;
+public:
+    ast_leq_expression(ast_expression* e1, ast_expression* e2)
+        : e1(e1), e2(e2) {}
+    std::ostream& print_struct(int d, std::ostream& s);
+    llvm::Value* CodeGen();
+};
+
+class ast_eq_expression : public ast_expression {
+private:
+    ast_expression *e1, *e2;
+public:
+    ast_eq_expression(ast_expression* e1, ast_expression* e2)
+        : e1(e1), e2(e2) {}
+    std::ostream& print_struct(int d, std::ostream& s);
+    llvm::Value* CodeGen();
+};
+
+class ast_assign_expression : public ast_expression {
+private:
+    Symbol identifier;
+    ast_expression* expression;
+    
+public:
+    ast_assign_expression(Symbol identifier, ast_expression* expression)
+        : identifier(identifier), expression(expression) {}
+    std::ostream& print_struct(int d, std::ostream& s);
+    llvm::Value* CodeGen();
+};
+
 class ast_block_item : public ast_struct {
 private:
     int index;
@@ -145,29 +238,22 @@ private:
 public:
     ast_init_declarator(ast_declarator* declarator);
     std::ostream& print_struct(int d, std::ostream& s);
+    void CodeGenGlobal(llvm::Type* type);
+    void CodeGenLocal(llvm::Type* type);
 };
 
-class ast_declarator : public ast_struct {
-public:
-    virtual Symbol get_identifier() = 0;
-    virtual llvm::Function* get_function(llvm::Type* return_type) = 0;
-};
-
-class ast_direct_declarator : public ast_declarator {
-
-};
-
-class ast_identifier_declarator : public ast_direct_declarator {
+class ast_identifier_declarator : public ast_struct {
 private:
     Symbol identifier;
 public:
     ast_identifier_declarator(Symbol identifier);
     std::ostream& print_struct(int d, std::ostream& s);
-    Symbol get_identifier();
-    llvm::Function* get_function(llvm::Type* return_type);
+    void CodeGenGlobal(llvm::Type* type);
+    void CodeGenLocal(llvm::Type* type);
+    Symbol get_identifier() { return identifier; }
 };
 
-class ast_function_declarator : public ast_direct_declarator {
+class ast_function_declarator : public ast_struct {
     typedef ast_parameter_declaration_list::iterator ListI;
 private:
     Symbol identifier;
@@ -176,8 +262,54 @@ public:
     ast_function_declarator(Symbol identifier,
         ast_parameter_declaration_list* parameter_declarations);
     std::ostream& print_struct(int d, std::ostream& s);
-    Symbol get_identifier();
-    llvm::Function* get_function(llvm::Type* return_type);
+    llvm::Function* CodeGenGlobal(llvm::Type* type);
+    Symbol get_identifier() { return identifier; }
+};
+
+class ast_direct_declarator : public ast_struct {
+private:
+    int index;
+    union {
+        ast_identifier_declarator* identifier_declarator;
+        ast_function_declarator* function_declarator;
+    } data;
+public:
+    ast_direct_declarator(ast_identifier_declarator* identifier_declarator) {
+        data.identifier_declarator = identifier_declarator;
+        index = 0;
+    }
+    ast_direct_declarator(ast_function_declarator* function_declarator) {
+        data.function_declarator = function_declarator;
+        index = 1;
+    }
+    void CodeGenGlobal(llvm::Type* type);
+    void CodeGenLocal(llvm::Type* type);
+    Symbol get_identifier() {
+        my_assert(index == 0, __LINE__, __FILE__);
+        return data.identifier_declarator->get_identifier();
+    }
+    ast_function_declarator* get_fun_decl() {
+        my_assert(index == 1, __LINE__, __FILE__);
+        return data.function_declarator;
+    }
+    std::ostream& print_struct(int d, std::ostream& s);
+};
+
+class ast_declarator : public ast_struct {
+private:
+    ast_direct_declarator* direct_declarator;
+public:
+    ast_declarator(ast_direct_declarator* direct_declarator)
+        : direct_declarator(direct_declarator) {}
+    void CodeGenGlobal(llvm::Type* type);
+    void CodeGenLocal(llvm::Type* type);
+    Symbol get_identifier() {
+        return direct_declarator->get_identifier();
+    }
+    ast_function_declarator* get_fun_decl() {
+        return direct_declarator->get_fun_decl();
+    }
+    std::ostream& print_struct(int d, std::ostream& s);
 };
 
 class ast_parameter_declaration : public ast_struct {
@@ -188,7 +320,12 @@ public:
     ast_parameter_declaration(ast_type_specifier* type_specifier,
         ast_declarator* declarator);
     std::ostream& print_struct(int d, std::ostream& s);
-    Arg* get_arg();
+    Symbol get_type(){
+        return type_specifier->get_type_specifier();
+    }
+    Symbol get_identifier(){
+        return declarator->get_identifier();
+    }
 };
 
 class ast_statement : public ast_struct {
