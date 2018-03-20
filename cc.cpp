@@ -149,7 +149,9 @@ llvm::Type* get_llvm_type(Symbol type_specifier) {
     } else if (type_specifier == Float) {
         return llvm::Type::getFloatTy(llvm_context);
     } else if (type_specifier == Void) {
-        return NULL;
+        return llvm::Type::getVoidTy(llvm_context);
+    } else if (type_specifier == Char) {
+        return llvm::Type::getInt8Ty(llvm_context);
     }
 
     my_assert(0, __LINE__, __FILE__);
@@ -157,12 +159,15 @@ llvm::Type* get_llvm_type(Symbol type_specifier) {
 }
 
 llvm::Value* get_default_value(llvm::Type* type) {
-    if (type->isIntegerTy()) {
+    if (type->isIntegerTy(32)) {
         return llvm::ConstantInt::get(llvm_context, 
             llvm::APInt(32, 0, true));
     } else if (type->isFloatTy()) {
         return llvm::ConstantFP::get(llvm_context, 
             llvm::APFloat(0.));
+    } else if (type->isIntegerTy(8)) {
+        return llvm::ConstantInt::get(llvm_context, 
+            llvm::APInt(8, 0, true));
     }
 
     my_assert(0, __LINE__, __FILE__);
@@ -170,10 +175,14 @@ llvm::Value* get_default_value(llvm::Type* type) {
 }
 
 Symbol get_symbol_type(llvm::Type* type) {
-    if (type->isIntegerTy()) {
+    if (type->isIntegerTy(32)) {
         return Int;
     } else if (type->isFloatTy()) {
         return Float;
+    } else if (type->isVoidTy()) {
+        return Void;
+    } else if (type->isIntegerTy(8)) {
+        return Char;
     }
 
     my_assert(0, __LINE__, __FILE__);
@@ -319,6 +328,11 @@ llvm::Function* ast_function_definition::CodeGen() {
     }
 
     compound_statement->CodeGen();
+
+    if (return_type == Void) {
+        builder.CreateRetVoid();
+    }
+
     llvm::verifyFunction(*function);
 
     named_values.exit_scope();
@@ -784,12 +798,12 @@ ast_identifier_expression::ast_identifier_expression(Symbol identifier)
 
 ast_i_constant::ast_i_constant(Symbol i_constant)
     : i_constant(i_constant) {
-        set_type(Undefined);
+        set_type(Int);
 }
 
 ast_f_constant::ast_f_constant(Symbol f_constant)
     : f_constant(f_constant) {
-        set_type(Undefined);
+        set_type(Float);
 }
 
 ast_declaration::ast_declaration(ast_type_specifier* type_specifier,
