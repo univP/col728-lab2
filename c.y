@@ -36,7 +36,7 @@ ast_program* program;
 %type <statement> selection_statement
 %type <block_items> block_item_list
 %type <block_item> block_item
-%type <expression> expression_statement
+%type <expression_statement> expression_statement
 %type <external_declarations> translation_unit
 %type <external_declaration> external_declaration
 %type <function_definition> function_definition
@@ -50,6 +50,7 @@ ast_program* program;
 %type <expression> equality_expression
 %type <expression> assignment_expression
 %type <statement> jump_statement
+%type <statement> iteration_statement
 
 %token	<symbol> IDENTIFIER I_CONSTANT F_CONSTANT 
 %token 	STRING_LITERAL FUNC_NAME SIZEOF
@@ -242,8 +243,10 @@ statement
 	: compound_statement
 	{ $$ = $1; }
 	| expression_statement
-	{ $$ = new ast_expression_statement($1); }
+	{ $$ = $1; }
 	| selection_statement
+	{ $$ = $1; }
+	| iteration_statement
 	{ $$ = $1; }
 	| jump_statement
 	{ $$ = $1; }
@@ -274,9 +277,9 @@ block_item
 
 expression_statement
 	: ';'
-	{ $$ = new ast_no_expression(); }
+	{ $$ = new ast_expression_statement(new ast_no_expression()); }
 	| expression ';'
-	{ $$ = $1; }
+	{ $$ = new ast_expression_statement($1); }
 	;
 
 selection_statement
@@ -284,6 +287,17 @@ selection_statement
 	{ $$ = new ast_mif_statement($3,$5,$7); }
 	| IF '(' expression ')' statement
 	{ $$ = new ast_uif_statement($3, $5); }
+	;
+
+iteration_statement
+	: FOR '(' expression_statement expression_statement ')' statement
+	{ $$ = new ast_for_statement($3, $4, $6); }
+	| FOR '(' expression_statement expression_statement expression ')' statement
+	{ $$ = new ast_for_statement($3, $4, $5, $7); }
+	| FOR '(' declaration expression_statement ')' statement
+	{ $$ = new ast_for_statement($3, $4, $6); }
+	| FOR '(' declaration expression_statement expression ')' statement
+	{ $$ = new ast_for_statement($3, $4, $5, $7); }
 	;
 
 jump_statement

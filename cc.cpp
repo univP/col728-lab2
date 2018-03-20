@@ -260,16 +260,10 @@ void ast_identifier_declarator::CodeGenLocal(llvm::Type* type) {
 }
 
 void ast_compound_statement::CodeGen() {
-    named_values.enter_scope();
-    named_types.enter_scope();
-       
     for (ListI lit = block_items->begin(); lit != block_items->end();
             lit++) {
         (*lit)->CodeGen();
     }
-
-    named_values.exit_scope();
-    named_types.exit_scope();
 }
 
 void ast_expression_statement::CodeGen() {
@@ -533,6 +527,33 @@ void ast_jump_statement::CodeGen() {
     builder.CreateRet(value);
 }
 
+void ast_for_statement::CodeGen() {
+    llvm::Function* function = builder.GetInsertBlock()->getParent();
+
+    if (index == 0) {
+        data.expression_statement->CodeGen();
+    } else if (index == 1) {
+        data.declaration->CodeGenLocal();
+    }
+
+    llvm::BasicBlock* loop_block = llvm::BasicBlock::Create(llvm_context,
+        "loop", function);
+    llvm::BasicBlock* after_block = llvm::BasicBlock::Create(llvm_context,
+        "after_loop");
+
+    llvm::Value* cond_val = condition->get_expression()->CodeGen();
+    builder.CreateCondBr(cond_val, loop_block, after_block);
+    builder.SetInsertPoint(loop_block);
+    
+    body->CodeGen();
+    update->CodeGen();
+    cond_val = condition->get_expression()->CodeGen();
+    builder.CreateCondBr(cond_val, loop_block, after_block);
+
+    function->getBasicBlockList().push_back(after_block);
+    builder.SetInsertPoint(after_block);
+}
+
 /*------------------------------------------------------.
 |   Section 2 : Print AST nodes along with their types. |
 `------------------------------------------------------*/
@@ -781,6 +802,21 @@ std::ostream& ast_uif_statement::print_struct(int d, std::ostream& s) {
 std::ostream& ast_jump_statement::print_struct(int d, std::ostream& s) {
     pad(d, s) << ".jump_statement" << std::endl;
     expression->print_struct(d+1, s);
+    return s;
+}
+
+std::ostream& ast_for_statement::print_struct(int d, std::ostream& s) {
+    pad(d,s) << ".for_statement" << std::endl;
+
+    if (index == 0) {
+        data.expression_statement->print_struct(d+1, s);
+    } else if (index == 1) {
+        data.declaration->print_struct(d+1, s);
+    }
+
+    condition->print_struct(d+1, s);
+    update->print_struct(d+1, s);
+    body->print_struct(d+1, s);
     return s;
 }
 

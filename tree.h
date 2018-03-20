@@ -375,6 +375,7 @@ public:
     ast_expression_statement(ast_expression* expression);
     std::ostream& print_struct(int d, std::ostream& s);
     void CodeGen();
+    ast_expression* get_expression() { return expression; }
 };
 
 class ast_no_expression : public ast_expression {
@@ -418,6 +419,53 @@ private:
 public:
     ast_jump_statement(): expression(new ast_no_expression()) {}
     ast_jump_statement(ast_expression* expression): expression(expression) {}
+    std::ostream& print_struct(int d, std::ostream& s);
+    void CodeGen();
+};
+
+class ast_for_statement : public ast_statement {
+private:
+    int index;
+    union {
+        ast_expression_statement* expression_statement;
+        ast_declaration* declaration;
+    } data;
+    ast_expression_statement* condition;
+    ast_expression* update;
+    ast_statement* body;
+public:
+    ast_for_statement(ast_expression_statement* expression_statement,
+        ast_expression_statement* condition, ast_statement* body)
+        : condition(condition), update(new ast_no_expression()),
+            body(body) {
+            index = 0;
+            data.expression_statement = expression_statement;
+    }
+
+    ast_for_statement(ast_expression_statement* expression_statement,
+        ast_expression_statement* condition, ast_expression* update,
+            ast_statement* body)
+        : condition(condition), update(update), body(body) {
+            index = 0;
+            data.expression_statement = expression_statement;
+    }
+
+    ast_for_statement(ast_declaration* declaration,
+        ast_expression_statement* condition, ast_statement* body)
+        : condition(condition), update(new ast_no_expression()),
+            body(body) {
+            index = 1;
+            data.declaration = declaration;
+    }
+
+    ast_for_statement(ast_declaration* declaration,
+        ast_expression_statement* condition, ast_expression* update,
+            ast_statement* body)
+        : condition(condition), update(update), body(body) {
+            index = 1;
+            data.declaration = declaration;
+    }
+
     std::ostream& print_struct(int d, std::ostream& s);
     void CodeGen();
 };

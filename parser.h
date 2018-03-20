@@ -23,6 +23,7 @@ union YYSTYPE {
 	ast_statement* statement;
     Symbol symbol;
 	ast_argument_list* arguments;
+	ast_expression_statement* expression_statement;
 	char unary;
 };
 
