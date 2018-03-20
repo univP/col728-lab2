@@ -1,0 +1,37 @@
+.program
+	.external_declaration
+		.declaration
+			int
+			.init_declarator
+				.declarator
+					.direct_declarator
+						.function_declarator
+							printf
+							.parameter_type_list
+								.parameter_declaration
+									int
+									.declarator
+										.direct_declarator
+											x
+								.parameter_declaration
+									int
+									.declarator
+										.direct_declarator
+											y
+
+	.external_declaration
+		.function_definition
+			int
+			.declarator
+				.direct_declarator
+					.function_declarator
+						main
+						.parameter_type_list
+			.compound_statement
+				.block_item
+					.jump_statement
+						.post_expression
+							printf
+							5: int
+							6: int
+

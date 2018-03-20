@@ -17,8 +17,6 @@ static void usage()
 
 #include "parser.h"
 extern "C" ast_program* program;
-int semant_debug = 1;
-int cgen_debug = 0;
 
 StrTable id_table;
 StrTable str_table;
@@ -52,12 +50,14 @@ main(int argc, char **argv)
     yyin = fopen(filename, "r");
     assert(yyin != NULL);
     int ret = yyparse();
-    printf("retv = %d\n", ret);
+    // printf("retv = %d\n", ret);
     
-    if (semant_debug) {
-        program->print_struct(0, std::cerr);
-    }
-
+    std::ofstream semant_stream;
+    std::string file(__FILE__);
+    file += ".semant";
+    semant_stream.open(file);
+    program->print_struct(0, semant_stream);
+    semant_stream.close();
     program->CodeGen();
 
     exit(0);
