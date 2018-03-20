@@ -17,9 +17,8 @@ int main(int x)
     j=4.5;
     if(i==j){
         i=95;
-    }
-    else{
-        j=94.9;
+        return i;
     }
     y(i,j);
+    return i*i;
 }

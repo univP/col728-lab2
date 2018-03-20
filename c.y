@@ -49,6 +49,7 @@ ast_program* program;
 %type <expression> relational_expression
 %type <expression> equality_expression
 %type <expression> assignment_expression
+%type <statement> jump_statement
 
 %token	<symbol> IDENTIFIER I_CONSTANT F_CONSTANT 
 %token 	STRING_LITERAL FUNC_NAME SIZEOF
@@ -244,6 +245,8 @@ statement
 	{ $$ = new ast_expression_statement($1); }
 	| selection_statement
 	{ $$ = $1; }
+	| jump_statement
+	{ $$ = $1; }
 	;
 
 compound_statement
@@ -281,6 +284,13 @@ selection_statement
 	{ $$ = new ast_mif_statement($3,$5,$7); }
 	| IF '(' expression ')' statement
 	{ $$ = new ast_uif_statement($3, $5); }
+	;
+
+jump_statement
+	: RETURN ';'
+	{ $$ = new ast_jump_statement(); }
+	| RETURN expression ';'
+	{ $$ = new ast_jump_statement($2); }
 	;
 
 translation_unit

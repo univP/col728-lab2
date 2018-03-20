@@ -250,23 +250,21 @@ void ast_identifier_declarator::CodeGenLocal(llvm::Type* type) {
     builder.CreateStore(get_default_value(type), alloca);    
 }
 
-llvm::Value* ast_compound_statement::CodeGen() {
+void ast_compound_statement::CodeGen() {
     named_values.enter_scope();
     named_types.enter_scope();
-
-    llvm::Value* last_value = NULL;    
+       
     for (ListI lit = block_items->begin(); lit != block_items->end();
             lit++) {
-        last_value = (*lit)->CodeGen();
+        (*lit)->CodeGen();
     }
 
     named_values.exit_scope();
     named_types.exit_scope();
-    return last_value;
 }
 
-llvm::Value* ast_expression_statement::CodeGen() {
-    return expression->CodeGen();
+void ast_expression_statement::CodeGen() {
+    expression->CodeGen();
 }
 
 llvm::Function* ast_function_declarator::CodeGenGlobal(llvm::Type* type){
@@ -320,8 +318,7 @@ llvm::Function* ast_function_definition::CodeGen() {
             ::get_symbol_type(type));
     }
 
-    llvm::Value* ret_val = compound_statement->CodeGen();
-    builder.CreateRet(ret_val);
+    compound_statement->CodeGen();
     llvm::verifyFunction(*function);
 
     named_values.exit_scope();
@@ -330,16 +327,14 @@ llvm::Function* ast_function_definition::CodeGen() {
     return function;
 }
 
-llvm::Value* ast_block_item::CodeGen() {
+void ast_block_item::CodeGen() {
     if (index == 0) {
         data.declaration->CodeGenLocal();
-        return NULL;
     } else if (index == 1) {
-        return data.statement->CodeGen();
+        data.statement->CodeGen();
+    } else {
+        my_assert(0, __LINE__, __FILE__);
     }
-
-    my_assert(0, __LINE__, __FILE__);
-    return NULL;
 }
 
 llvm::Value* ast_postfix_expression::CodeGen(){
@@ -469,10 +464,10 @@ llvm::Value* ast_assign_expression::CodeGen(){
     return e_val;  
 }
 
-llvm::Value* ast_mif_statement::CodeGen(){
+void ast_mif_statement::CodeGen(){
     llvm::Value* cond_val = condition->CodeGen();
     if(!cond_val)
-        return nullptr;
+        my_assert(0, __LINE__, __FILE__);
     
     cond_val = builder.CreateICmpNE(cond_val, llvm::ConstantInt::get(llvm_context, 
         llvm::APInt(32, 0, true)), "mifcond");
@@ -494,15 +489,13 @@ llvm::Value* ast_mif_statement::CodeGen(){
     builder.CreateBr(merge_block);
     function->getBasicBlockList().push_back(merge_block);
     builder.SetInsertPoint(merge_block);
-    
-    return NULL;
 }
 
-llvm::Value* ast_uif_statement::CodeGen(){
+void ast_uif_statement::CodeGen(){
 
     llvm::Value* cond_val = condition->CodeGen();
     if(!cond_val)
-        return nullptr;
+        my_assert(0, __LINE__, __FILE__);
     
     cond_val = builder.CreateICmpNE(cond_val, llvm::ConstantInt::get(llvm_context, 
         llvm::APInt(32, 0, true)), "uifcond");
@@ -518,12 +511,13 @@ llvm::Value* ast_uif_statement::CodeGen(){
     
     builder.CreateBr(merge_block);
     function->getBasicBlockList().push_back(merge_block);
-    builder.SetInsertPoint(merge_block);
-    
-    return NULL;
-    
+    builder.SetInsertPoint(merge_block);    
 }
 
+void ast_jump_statement::CodeGen() {
+    llvm::Value* value = expression->CodeGen();
+    builder.CreateRet(value);
+}
 
 /*------------------------------------------------------.
 |   Section 2 : Print AST nodes along with their types. |
@@ -629,7 +623,7 @@ std::ostream& ast_expression_statement::print_struct(int d, std::ostream& s) {
 }
 
 std::ostream& ast_no_expression::print_struct(int d, std::ostream& s) {
-    pad(d, s) << *get_type() << std::endl;
+    pad(d, s) << ".no_expression" << std::endl;
     return s;
 }
 
@@ -767,6 +761,12 @@ std::ostream& ast_uif_statement::print_struct(int d, std::ostream& s) {
     pad(d, s) << ".uid_statement" << std::endl;
     condition->print_struct(d+1, s);
     then_statement->print_struct(d+1, s);
+    return s;
+}
+
+std::ostream& ast_jump_statement::print_struct(int d, std::ostream& s) {
+    pad(d, s) << ".jump_statement" << std::endl;
+    expression->print_struct(d+1, s);
     return s;
 }
 

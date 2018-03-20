@@ -207,7 +207,7 @@ public:
     ast_block_item(ast_statement* statement);
     int get_index();
     std::ostream& print_struct(int d, std::ostream& s);
-    llvm::Value* CodeGen();
+    void CodeGen();
 };
 
 class ast_declaration : public ast_struct {
@@ -330,7 +330,7 @@ public:
 
 class ast_statement : public ast_struct {
 public:
-    virtual llvm::Value* CodeGen() = 0;
+    virtual void CodeGen() = 0;
 };
 
 class ast_mif_statement : public ast_statement{
@@ -342,7 +342,7 @@ public:
     ast_mif_statement(ast_expression* condition, ast_statement* then_statement,
         ast_statement* else_statement) : condition(condition), 
             then_statement(then_statement), else_statement(else_statement) {}
-    llvm::Value* CodeGen();
+    void CodeGen();
     std::ostream& print_struct(int d, std::ostream& s);
 };
 
@@ -354,7 +354,7 @@ public:
     ast_uif_statement(ast_expression* condition, ast_statement* then_statement)
          : condition(condition), 
             then_statement(then_statement) {}
-    llvm::Value* CodeGen();
+    void CodeGen();
     std::ostream& print_struct(int d, std::ostream& s);    
 };
 
@@ -365,7 +365,7 @@ private:
 public:
     ast_compound_statement(ast_block_item_list* block_items);
     std::ostream& print_struct(int d, std::ostream& s);
-    llvm::Value* CodeGen();
+    void CodeGen();
 };
 
 class ast_expression_statement : public ast_statement {
@@ -374,7 +374,7 @@ private:
 public:
     ast_expression_statement(ast_expression* expression);
     std::ostream& print_struct(int d, std::ostream& s);
-    llvm::Value* CodeGen();
+    void CodeGen();
 };
 
 class ast_no_expression : public ast_expression {
@@ -412,6 +412,14 @@ public:
     llvm::Function* CodeGen();
 };
 
-
+class ast_jump_statement : public ast_statement {
+private:
+    ast_expression* expression;
+public:
+    ast_jump_statement(): expression(new ast_no_expression()) {}
+    ast_jump_statement(ast_expression* expression): expression(expression) {}
+    std::ostream& print_struct(int d, std::ostream& s);
+    void CodeGen();
+};
 
 #endif
