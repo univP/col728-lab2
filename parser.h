@@ -24,6 +24,7 @@ union YYSTYPE {
     Symbol symbol;
 	ast_argument_list* arguments;
 	ast_expression_statement* expression_statement;
+	ast_parameter_type_list* parameter_types;
 	char unary;
 };
 

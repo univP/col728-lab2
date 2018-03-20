@@ -28,7 +28,7 @@ ast_program* program;
 %type <type_specifier> type_specifier
 %type <declarator> declarator
 %type <direct_declarator> direct_declarator
-%type <parameter_declarations> parameter_type_list
+%type <parameter_types> parameter_type_list
 %type <parameter_declarations> parameter_list
 %type <parameter_declaration> parameter_declaration
 %type <statement> statement
@@ -217,12 +217,15 @@ direct_declarator
 	{ $$ = new ast_direct_declarator(new ast_function_declarator($1, $3)); }
 	| IDENTIFIER '(' ')'
 	{ $$ = new ast_direct_declarator(new ast_function_declarator(
-		$1, new ast_parameter_declaration_list())); }
+		$1, new ast_parameter_type_list(
+			new ast_parameter_declaration_list(), false))); }
 	;
 
 parameter_type_list
 	: parameter_list
-	{ $$ = $1; }
+	{ $$ = new ast_parameter_type_list($1, false); }
+	| parameter_list ',' ELLIPSIS
+	{ $$ = new ast_parameter_type_list($1, true); }
 	;
 
 parameter_list

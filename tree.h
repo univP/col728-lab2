@@ -43,6 +43,7 @@ class ast_expression_statement;
 class ast_external_declaration;
 typedef std::list<ast_external_declaration*> ast_external_declaration_list;
 class ast_function_definition;          // subclass of ast_external_declaration
+class ast_parameter_type_list;
 
 std::ostream& pad(int d, std::ostream& s);
 
@@ -257,10 +258,11 @@ class ast_function_declarator : public ast_struct {
     typedef ast_parameter_declaration_list::iterator ListI;
 private:
     Symbol identifier;
-    ast_parameter_declaration_list* parameter_declarations;
+    ast_parameter_type_list* parameter_types;
 public:
     ast_function_declarator(Symbol identifier,
-        ast_parameter_declaration_list* parameter_declarations);
+        ast_parameter_type_list* parameter_types):
+        identifier(identifier), parameter_types(parameter_types) {}
     std::ostream& print_struct(int d, std::ostream& s);
     llvm::Function* CodeGenGlobal(llvm::Type* type);
     Symbol get_identifier() { return identifier; }
@@ -468,6 +470,27 @@ public:
 
     std::ostream& print_struct(int d, std::ostream& s);
     void CodeGen();
+};
+
+class ast_parameter_type_list: public ast_struct {
+    typedef ast_parameter_declaration_list::iterator ListI;
+private:
+    ast_parameter_declaration_list* parameter_declarations;
+    bool variadic;
+public:
+    ast_parameter_type_list(ast_parameter_declaration_list* 
+        parameter_declarations, bool variadic)
+        : parameter_declarations(parameter_declarations), variadic(variadic) {}
+    
+    ast_parameter_declaration_list* get_parameter_declarations() {
+        return parameter_declarations;
+    }
+
+    bool is_variadic() {
+        return variadic;
+    }
+
+    std::ostream& print_struct(int d, std::ostream& s);
 };
 
 #endif

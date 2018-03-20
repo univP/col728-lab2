@@ -93,7 +93,7 @@ llvm::AllocaInst* CreateEntryBlockAlloca(llvm::Type* type,
 
 void ast_program::CodeGen() {
     named_values.enter_scope();
-    module = llvm::make_unique<llvm::Module>("my cool jit",
+    module = llvm::make_unique<llvm::Module>("col728 lab2",
         llvm_context);
 
     for (ListI lit = external_declarations->begin(); 
@@ -272,6 +272,9 @@ void ast_expression_statement::CodeGen() {
 
 llvm::Function* ast_function_declarator::CodeGenGlobal(llvm::Type* type){
     std::vector<llvm::Type*> arg_types;
+    ast_parameter_declaration_list* parameter_declarations =
+        parameter_types->get_parameter_declarations();
+
     for(ListI lit = parameter_declarations->begin(); 
         lit!= parameter_declarations->end(); lit++){
             Symbol type = (*lit)->get_type();
@@ -279,7 +282,7 @@ llvm::Function* ast_function_declarator::CodeGenGlobal(llvm::Type* type){
     }
 
     llvm::FunctionType* function_type = llvm::FunctionType::get(type, 
-        arg_types, false);
+        arg_types, parameter_types->is_variadic());
 
     llvm::Function* function = llvm::Function::Create(function_type,
         llvm::Function::ExternalLinkage, *identifier, module.get());
@@ -623,13 +626,7 @@ std::ostream& ast_identifier_declarator::print_struct(int d, std::ostream& s) {
 std::ostream& ast_function_declarator::print_struct(int d, std::ostream& s) {
     pad(d, s) << ".function_declarator" << std::endl;
     pad(d+1,s) << *identifier << std::endl;
-
-    for (ListI lit = parameter_declarations->begin(); 
-            lit != parameter_declarations->end(); lit++) {
-        ast_parameter_declaration* parameter_declaration = *lit;
-        parameter_declaration->print_struct(d+1, s);
-    }
-
+    parameter_types->print_struct(d+1, s);
     return s;
 }
 
@@ -820,6 +817,18 @@ std::ostream& ast_for_statement::print_struct(int d, std::ostream& s) {
     return s;
 }
 
+std::ostream& ast_parameter_type_list::print_struct(int d, std::ostream& s) {
+    pad(d,s) << ".parameter_type_list" << std::endl;
+
+    for (ListI lit = parameter_declarations->begin(); 
+            lit != parameter_declarations->end(); lit++) {
+        ast_parameter_declaration* parameter_declaration = *lit;
+        parameter_declaration->print_struct(d+1, s);
+    }
+
+    return s;
+}
+
 /*---------------------------------------------------.
 |   Section 2 : Contructors of tree nodes in AST.    |
 `---------------------------------------------------*/
@@ -909,11 +918,6 @@ ast_external_declaration::ast_external_declaration(ast_function_definition*
 int ast_external_declaration::get_index() {
     return index;
 }
-
-ast_function_declarator::ast_function_declarator(Symbol identifier,
-        ast_parameter_declaration_list* parameter_declarations)
-        : identifier(identifier), 
-        parameter_declarations(parameter_declarations) {}
 
 std::ostream& pad(int d, std::ostream& s) {
     my_assert(d >= 0, __LINE__, __FILE__);
