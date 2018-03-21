@@ -1,25 +1,5 @@
 .program
 	.external_declaration
-		.declaration
-			int
-			.init_declarator
-				.declarator
-					.direct_declarator
-						.function_declarator
-							printf
-							.parameter_type_list
-								.parameter_declaration
-									int
-									.declarator
-										.direct_declarator
-											x
-								.parameter_declaration
-									int
-									.declarator
-										.direct_declarator
-											y
-
-	.external_declaration
 		.function_definition
 			int
 			.declarator
@@ -29,9 +9,34 @@
 						.parameter_type_list
 			.compound_statement
 				.block_item
+					.declaration
+						int
+						.init_declarator
+							.declarator
+								.direct_declarator
+									a
+				.block_item
+					.declaration
+						int
+						.init_declarator
+							.declarator
+								.direct_declarator
+									b
+				.block_item
+					.declaration
+						int
+						.init_declarator
+							.declarator
+								.direct_declarator
+									c
+				.block_item
+					.expression_statement
+						.assign_expression
+							c
+							.multiply_expression
+								a: int
+								b: int
+				.block_item
 					.jump_statement
-						.post_expression
-							printf
-							5: int
-							6: int
+						'c': int
 

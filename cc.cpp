@@ -31,12 +31,20 @@ Symbol
     Undefined = id_table.add_string(".undefined"),
     No_type = id_table.add_string(".no_type");
 
+struct MethodType {
+    Symbol return_type;
+    std::vector<Symbol> param_types;
+};
+
 llvm::LLVMContext llvm_context;
 llvm::IRBuilder<> builder(llvm_context);
 std::unique_ptr<llvm::Module> module;
 SymTable<Symbol, llvm::AllocaInst> named_values;
 SymTable<Symbol, std::string> named_types;
 std::map<Symbol, ast_function_declarator*> fun_decls;
+SymTable<Symbol, std::string> variable_table;
+SymTable<Symbol, MethodType> method_table;
+std::vector<std::string> errors;
 
 int
 main(int argc, char **argv)
@@ -49,8 +57,14 @@ main(int argc, char **argv)
     char const *filename = argv[1];
     yyin = fopen(filename, "r");
     assert(yyin != NULL);
-    int ret = yyparse();
+    int retv = yyparse();
     // printf("retv = %d\n", ret);
+
+    if (retv) {
+        std::cerr << "Compilation halted due to lexer/parser errors." 
+            << std::endl;
+        exit(0);
+    }
     
     std::ofstream semant_stream;
     std::string file(__FILE__);
@@ -58,8 +72,14 @@ main(int argc, char **argv)
     semant_stream.open(file);
     program->print_struct(0, semant_stream);
     semant_stream.close();
-    program->CodeGen();
 
+    if (errors.size() != 0) {
+        std::cerr << "Compilation halted due to semantic errors." 
+            << std::endl;
+        exit(0);
+    }
+
+    program->CodeGen();
     exit(0);
 }
 
@@ -93,6 +113,7 @@ llvm::AllocaInst* CreateEntryBlockAlloca(llvm::Type* type,
 
 void ast_program::CodeGen() {
     named_values.enter_scope();
+    named_types.enter_scope();
     module = llvm::make_unique<llvm::Module>("col728 lab2",
         llvm_context);
 
@@ -102,6 +123,7 @@ void ast_program::CodeGen() {
     }
     
     module->print(llvm::errs(), nullptr);
+    named_types.exit_scope();
     named_values.exit_scope();
 }
 
@@ -558,10 +580,12 @@ void ast_for_statement::CodeGen() {
 }
 
 /*------------------------------------------------------.
-|   Section 2 : Print AST nodes along with their types. |
+|   Section 3 : Print AST nodes along with their types. |
 `------------------------------------------------------*/
 
 std::ostream& ast_program::print_struct(int d, std::ostream& s) {
+    variable_table.enter_scope();
+    method_table.enter_scope();
     pad(d, s) << ".program" << std::endl;
     
     for (ListI lit = external_declarations->begin();
@@ -569,6 +593,8 @@ std::ostream& ast_program::print_struct(int d, std::ostream& s) {
         (*lit)->print_struct(d+1, s) << std::endl;
     }
 
+    variable_table.exit_scope();
+    method_table.exit_scope();
     return s;
 }
 
@@ -581,17 +607,27 @@ void ast_expression::set_type(Symbol type) {
 } 
 
 std::ostream& ast_identifier_expression::print_struct(int d, std::ostream& s) {
+    Symbol type = variable_table.lookup(identifier);
+
+    if (type == NULL) {
+        errors.push_back("Identifier " + *identifier + " not in scope.");
+    } else {
+        set_type(type);
+    }
+
     pad(d, s) << *identifier << ": " << *get_type() << std::endl;
     return s;
 }
 
 std::ostream& ast_i_constant::print_struct(int d, std::ostream& s) {
     pad(d, s) << *i_constant << ": " << *get_type() << std::endl;
+    set_type(Int);
     return s;
 }
 
 std::ostream& ast_f_constant::print_struct(int d, std::ostream& s) {
     pad(d, s) << *f_constant << ": " << *get_type() << std::endl;
+    set_type(Float);
     return s;
 }
 
@@ -601,7 +637,8 @@ std::ostream& ast_declaration::print_struct(int d, std::ostream& s) {
 
     for (ListI lit = init_declarators->begin(); lit != init_declarators->end(); lit++) {
         ast_init_declarator* init_declarator = *lit;
-        init_declarator->print_struct(d+1, s);
+        init_declarator->print_struct(d+1, s, 
+            type_specifier->get_type_specifier());
     }
 
     return s;
@@ -612,28 +649,44 @@ std::ostream& ast_type_specifier::print_struct(int d, std::ostream& s) {
     return s;
 }
 
-std::ostream& ast_init_declarator::print_struct(int d, std::ostream& s) {
+std::ostream& ast_init_declarator::print_struct(int d, std::ostream& s, 
+        Symbol type) {
     pad(d, s) << ".init_declarator" << std::endl;
-    declarator->print_struct(d+1, s);
+    declarator->print_struct(d+1, s, type);
     return s;
 }
 
-std::ostream& ast_identifier_declarator::print_struct(int d, std::ostream& s) {
+std::ostream& ast_identifier_declarator::print_struct(int d, std::ostream& s,
+        Symbol type) {
     pad(d, s) << *identifier << std::endl;
+    variable_table.insert(identifier, type);
     return s;
 }
 
-std::ostream& ast_function_declarator::print_struct(int d, std::ostream& s) {
+std::ostream& ast_function_declarator::print_struct(int d, std::ostream& s,
+        Symbol type) {
     pad(d, s) << ".function_declarator" << std::endl;
     pad(d+1,s) << *identifier << std::endl;
     parameter_types->print_struct(d+1, s);
+    std::vector<Symbol> param_types;
+
+    for (ListI lit = parameter_types->get_parameter_declarations()->begin();
+            lit != parameter_types->get_parameter_declarations()->end(); lit++) {
+                param_types.push_back((*lit)->get_type());
+    }
+
+    MethodType* method_type = new MethodType;
+    method_type->return_type = type;
+    method_type->param_types = param_types;
+    method_table.insert(identifier, method_type);
     return s;
 }
 
 std::ostream& ast_parameter_declaration::print_struct(int d, std::ostream& s) {
     pad(d, s) << ".parameter_declaration" << std::endl;
     type_specifier->print_struct(d+1, s);
-    declarator->print_struct(d+1, s);
+    pad(d+1,s) << *identifier << std::endl;
+    variable_table.insert(identifier, type_specifier->get_type_specifier());
     return s;
 }
 
@@ -656,14 +709,19 @@ std::ostream& ast_expression_statement::print_struct(int d, std::ostream& s) {
 
 std::ostream& ast_no_expression::print_struct(int d, std::ostream& s) {
     pad(d, s) << ".no_expression" << std::endl;
+    set_type(No_type);
     return s;
 }
 
 std::ostream& ast_function_definition::print_struct(int d, std::ostream& s) {
+    variable_table.enter_scope();
+    method_table.enter_scope();
     pad(d, s) << ".function_definition" << std::endl;
     type_specifier->print_struct(d+1, s);
-    declarator->print_struct(d+1, s);
+    declarator->print_struct(d+1, s, type_specifier->get_type_specifier());
     compound_statement->print_struct(d+1, s);
+    variable_table.exit_scope();
+    method_table.exit_scope();
     return s;
 }
 
@@ -703,7 +761,14 @@ std::ostream& ast_postfix_expression::print_struct(int d, std::ostream& s) {
 std::ostream& ast_unary_expression::print_struct(int d, std::ostream& s) {
     pad(d, s) << ".unary_expression" << std::endl;
     pad(d+1, s)<<unary <<std::endl;
-    expression->print_struct(d+1, s); 
+    expression->print_struct(d+1, s);
+
+    if (expression->get_type() != Int) {
+        errors.push_back("Invalid type of argument.");
+    } else {
+        set_type(Int);
+    }
+
     return s;
 }
 
@@ -711,6 +776,14 @@ std::ostream& ast_add_expression::print_struct(int d, std::ostream& s) {
     pad(d, s) << ".add_expression" << std::endl;
     e1->print_struct(d+1, s);  
     e2->print_struct(d+1, s); 
+
+    if (e1->get_type() == Int && e2->get_type() == Int) {
+        set_type(Int);
+    } else if (e1->get_type() == Float && e2->get_type() == Float) {
+        set_type(Float);
+    } else {
+        errors.push_back("Invalid type of arguments.");
+    }
 
     return s;
 }
@@ -720,6 +793,14 @@ std::ostream& ast_sub_expression::print_struct(int d, std::ostream& s) {
     e1->print_struct(d+1, s);  
     e2->print_struct(d+1, s); 
 
+    if (e1->get_type() == Int && e2->get_type() == Int) {
+        set_type(Int);
+    } else if (e1->get_type() == Float && e2->get_type() == Float) {
+        set_type(Float);
+    } else {
+        errors.push_back("Invalid type of arguments.");
+    }
+
     return s;
 }
 
@@ -727,6 +808,15 @@ std::ostream& ast_mul_expression::print_struct(int d, std::ostream& s) {
     pad(d, s) << ".multiply_expression" << std::endl;
     e1->print_struct(d+1, s);  
     e2->print_struct(d+1, s); 
+
+    if (e1->get_type() == Int && e2->get_type() == Int) {
+        set_type(Int);
+    } else if (e1->get_type() == Float && e2->get_type() == Float) {
+        set_type(Float);
+    } else {
+        errors.push_back("Invalid type of arguments.");
+    }
+
     return s;
 }
 
@@ -735,6 +825,14 @@ std::ostream& ast_less_expression::print_struct(int d, std::ostream& s) {
     e1->print_struct(d+1, s);  
     e2->print_struct(d+1, s); 
 
+    if (e1->get_type() == Int && e2->get_type() == Int) {
+        set_type(Int);
+    } else if (e1->get_type() == Float && e2->get_type() == Float) {
+        set_type(Float);
+    } else {
+        errors.push_back("Invalid type of arguments.");
+    }
+
     return s;
 }
 
@@ -742,6 +840,14 @@ std::ostream& ast_leq_expression::print_struct(int d, std::ostream& s) {
     pad(d, s) << ".leq_expression" << std::endl;
     e1->print_struct(d+1, s);  
     e2->print_struct(d+1, s); 
+
+    if (e1->get_type() == Int && e2->get_type() == Int) {
+        set_type(Int);
+    } else if (e1->get_type() == Float && e2->get_type() == Float) {
+        set_type(Int);
+    } else {
+        errors.push_back("Invalid type of arguments.");
+    }
 
     return s;
 }
@@ -752,31 +858,51 @@ std::ostream& ast_eq_expression::print_struct(int d, std::ostream& s) {
     e1->print_struct(d+1, s);  
     e2->print_struct(d+1, s);  
   
+    if (e1->get_type() == Int && e2->get_type() == Int) {
+        set_type(Int);
+    } else if (e1->get_type() == Float && e2->get_type() == Float) {
+        set_type(Float);
+    } else {
+        errors.push_back("Invalid type of arguments.");
+    }
+
     return s;
 }
 
 std::ostream& ast_assign_expression::print_struct(int d, std::ostream& s) {
     pad(d, s) << ".assign_expression" << std::endl;
     pad(d+1, s)<< *identifier <<std::endl;
-    expression->print_struct(d+1, s);   
-    return s;
-}
+    expression->print_struct(d+1, s);
 
-std::ostream& ast_direct_declarator::print_struct(int d, std::ostream& s) {
-    pad(d, s) << ".direct_declarator" << std::endl;
+    Symbol type = variable_table.lookup(identifier);
 
-    if (index == 0) {
-        data.identifier_declarator->print_struct(d+1, s);
-    } else if (index == 1) {
-        data.function_declarator->print_struct(d+1, s);
+    if (!type) {
+        errors.push_back("Identifier not in scope.");
+    } else if (type != expression->get_type()) {
+        errors.push_back("Invalid type of arguments.");
+    } else {
+        set_type(type);
     }
 
     return s;
 }
 
-std::ostream& ast_declarator::print_struct(int d, std::ostream& s) {
+std::ostream& ast_direct_declarator::print_struct(int d, std::ostream& s,
+        Symbol type) {
+    pad(d, s) << ".direct_declarator" << std::endl;
+
+    if (index == 0) {
+        data.identifier_declarator->print_struct(d+1, s, type);
+    } else if (index == 1) {
+        data.function_declarator->print_struct(d+1, s, type);
+    }
+
+    return s;
+}
+
+std::ostream& ast_declarator::print_struct(int d, std::ostream& s, Symbol type) {
     pad(d, s) << ".declarator" << std::endl;
-    direct_declarator->print_struct(d+1, s);
+    direct_declarator->print_struct(d+1, s, type);
     return s;
 }
 
@@ -830,7 +956,7 @@ std::ostream& ast_parameter_type_list::print_struct(int d, std::ostream& s) {
 }
 
 /*---------------------------------------------------.
-|   Section 2 : Contructors of tree nodes in AST.    |
+|   Section 4 : Contructors of tree nodes in AST.    |
 `---------------------------------------------------*/
 
 ast_program::ast_program(ast_external_declaration_list* external_declarations)
@@ -864,12 +990,6 @@ ast_init_declarator::ast_init_declarator(ast_declarator* declarator)
 
 ast_identifier_declarator::ast_identifier_declarator(Symbol identifier)
     : identifier(identifier) {}
-
-ast_parameter_declaration::ast_parameter_declaration(
-        ast_type_specifier* type_specifier,
-        ast_declarator* declarator)
-    : type_specifier(type_specifier),
-        declarator(declarator) {}
 
 ast_compound_statement::ast_compound_statement(ast_block_item_list* block_items)
     : block_items(block_items) {}

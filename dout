@@ -12,7 +12,3 @@ c.lex.cpp: At global scope:
 c.lex.cpp:1975:17: warning: ‘void yyunput(int, char*)’ defined but not used [-Wunused-function]
      static void yyunput (int c, char * yy_bp )
                  ^~~~~~~
-cc.cpp: In function ‘int main(int, char**)’:
-cc.cpp:52:9: warning: unused variable ‘ret’ [-Wunused-variable]
-     int ret = yyparse();
-         ^~~

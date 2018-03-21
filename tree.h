@@ -51,7 +51,6 @@ std::ostream& pad(int d, std::ostream& s);
 
 class ast_struct {
 public:
-    virtual std::ostream& print_struct(int d, std::ostream& s) = 0;
 };
 
 class ast_program : public ast_struct {
@@ -71,6 +70,7 @@ public:
     Symbol get_type();
     void set_type(Symbol type);
     virtual llvm::Value* CodeGen() = 0;
+    virtual std::ostream& print_struct(int d, std::ostream& s) = 0;
 };
 
 class ast_identifier_expression : public ast_expression {
@@ -238,7 +238,7 @@ private:
     ast_declarator* declarator;
 public:
     ast_init_declarator(ast_declarator* declarator);
-    std::ostream& print_struct(int d, std::ostream& s);
+    std::ostream& print_struct(int d, std::ostream& s, Symbol type);
     void CodeGenGlobal(llvm::Type* type);
     void CodeGenLocal(llvm::Type* type);
 };
@@ -248,7 +248,7 @@ private:
     Symbol identifier;
 public:
     ast_identifier_declarator(Symbol identifier);
-    std::ostream& print_struct(int d, std::ostream& s);
+    std::ostream& print_struct(int d, std::ostream& s, Symbol type);
     void CodeGenGlobal(llvm::Type* type);
     void CodeGenLocal(llvm::Type* type);
     Symbol get_identifier() { return identifier; }
@@ -263,7 +263,7 @@ public:
     ast_function_declarator(Symbol identifier,
         ast_parameter_type_list* parameter_types):
         identifier(identifier), parameter_types(parameter_types) {}
-    std::ostream& print_struct(int d, std::ostream& s);
+    std::ostream& print_struct(int d, std::ostream& s, Symbol type);
     llvm::Function* CodeGenGlobal(llvm::Type* type);
     Symbol get_identifier() { return identifier; }
 };
@@ -280,21 +280,21 @@ public:
         data.identifier_declarator = identifier_declarator;
         index = 0;
     }
+    
     ast_direct_declarator(ast_function_declarator* function_declarator) {
         data.function_declarator = function_declarator;
         index = 1;
     }
+    
     void CodeGenGlobal(llvm::Type* type);
     void CodeGenLocal(llvm::Type* type);
-    Symbol get_identifier() {
-        my_assert(index == 0, __LINE__, __FILE__);
-        return data.identifier_declarator->get_identifier();
-    }
+    
     ast_function_declarator* get_fun_decl() {
         my_assert(index == 1, __LINE__, __FILE__);
         return data.function_declarator;
     }
-    std::ostream& print_struct(int d, std::ostream& s);
+
+    std::ostream& print_struct(int d, std::ostream& s, Symbol type);
 };
 
 class ast_declarator : public ast_struct {
@@ -305,34 +305,37 @@ public:
         : direct_declarator(direct_declarator) {}
     void CodeGenGlobal(llvm::Type* type);
     void CodeGenLocal(llvm::Type* type);
-    Symbol get_identifier() {
-        return direct_declarator->get_identifier();
-    }
+
     ast_function_declarator* get_fun_decl() {
         return direct_declarator->get_fun_decl();
     }
-    std::ostream& print_struct(int d, std::ostream& s);
+    
+    std::ostream& print_struct(int d, std::ostream& s, Symbol type);
 };
 
 class ast_parameter_declaration : public ast_struct {
 private:
     ast_type_specifier* type_specifier;
-    ast_declarator* declarator;
+    Symbol identifier;
 public:
     ast_parameter_declaration(ast_type_specifier* type_specifier,
-        ast_declarator* declarator);
+        Symbol identifier): type_specifier(type_specifier), 
+        identifier(identifier) {}
     std::ostream& print_struct(int d, std::ostream& s);
+    
     Symbol get_type(){
         return type_specifier->get_type_specifier();
     }
+    
     Symbol get_identifier(){
-        return declarator->get_identifier();
+        return identifier;
     }
 };
 
 class ast_statement : public ast_struct {
 public:
     virtual void CodeGen() = 0;
+    virtual std::ostream& print_struct(int d, std::ostream& s) = 0;
 };
 
 class ast_mif_statement : public ast_statement{

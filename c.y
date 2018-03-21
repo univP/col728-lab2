@@ -238,7 +238,7 @@ parameter_list
 	;
 
 parameter_declaration
-	: declaration_specifiers declarator
+	: declaration_specifiers IDENTIFIER
 	{ $$ = new ast_parameter_declaration($1, $2); }
 	;
 
