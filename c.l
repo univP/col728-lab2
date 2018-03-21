@@ -122,8 +122,35 @@ static int check_type(void);
 {HP}{H}+"."{P}{FS}?			{ 
     yylval.symbol = float_table.add_string(yytext); return F_CONSTANT; }
 
-({SP}?\"([^"\\\n]|{ES})*\"{WS}*)+	{ 
-    yylval.symbol = str_table.add_string(yytext); return STRING_LITERAL; }
+({SP}?\"([^"\\\n]|{ES})*\"{WS}*)+	{
+    std::string result;
+
+    for (int i = 1; i < (yyleng-1); i++) {
+        if (yytext[i] == '\\') {
+            i++;
+            if (yytext[i] == 'a') {
+                result.push_back('\a');
+            } else if (yytext[i] == 'b') {
+                result.push_back('\b');
+            } else if (yytext[i] == 'f') {
+                result.push_back('\f');
+            } else if (yytext[i] == 'r') {
+                result.push_back('\r');
+            } else if (yytext[i] == 't') {
+                result.push_back('\t');
+            } else if (yytext[i] == 'v') {
+                result.push_back('\v');
+            } else if (yytext[i] == 'n') {
+                result.push_back('\n');
+            } else {
+                result.push_back(yytext[i]);
+            }
+        } else {
+            result.push_back(yytext[i]);
+        }
+    }
+
+    yylval.symbol = str_table.add_string(result); return STRING_LITERAL; }
 
 "..."					{ return ELLIPSIS; }
 ">>="					{ return RIGHT_ASSIGN; }

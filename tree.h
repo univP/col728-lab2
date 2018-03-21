@@ -100,6 +100,16 @@ public:
     llvm::Value* CodeGen();
 };
 
+class ast_string_expression : public ast_expression {
+private:
+    Symbol string_literal;
+public:
+    ast_string_expression(Symbol string_literal)
+        : string_literal(string_literal) {}
+    std::ostream& print_struct(int d, std::ostream& s);
+    llvm::Value* CodeGen();
+};
+
 class ast_postfix_expression : public ast_expression {
     typedef ast_argument_list::iterator argI;
 private:
@@ -317,10 +327,11 @@ class ast_parameter_declaration : public ast_struct {
 private:
     ast_type_specifier* type_specifier;
     Symbol identifier;
+    bool pointer;
 public:
     ast_parameter_declaration(ast_type_specifier* type_specifier,
-        Symbol identifier): type_specifier(type_specifier), 
-        identifier(identifier) {}
+        Symbol identifier, bool pointer): type_specifier(type_specifier), 
+        identifier(identifier), pointer(pointer) {}
     std::ostream& print_struct(int d, std::ostream& s);
     
     Symbol get_type(){
@@ -330,6 +341,8 @@ public:
     Symbol get_identifier(){
         return identifier;
     }
+
+    bool is_pointer() { return pointer; }
 };
 
 class ast_statement : public ast_struct {

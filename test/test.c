@@ -1,7 +1,6 @@
-float main() {
-    int a;
-    int b;
-    int c;
-    c = a*b;
-    return 'c';
+int printf(char* format, ...);
+
+int main() {
+    printf("Hello World\n");
+    return 0;
 }

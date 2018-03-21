@@ -52,8 +52,8 @@ ast_program* program;
 %type <statement> jump_statement
 %type <statement> iteration_statement
 
-%token	<symbol> IDENTIFIER I_CONSTANT F_CONSTANT 
-%token 	STRING_LITERAL FUNC_NAME SIZEOF
+%token	<symbol> IDENTIFIER I_CONSTANT F_CONSTANT STRING_LITERAL
+%token 	FUNC_NAME SIZEOF
 %token	PTR_OP INC_OP DEC_OP LEFT_OP RIGHT_OP LE_OP GE_OP EQ_OP NE_OP
 %token	AND_OP OR_OP MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN ADD_ASSIGN
 %token	SUB_ASSIGN LEFT_ASSIGN RIGHT_ASSIGN AND_ASSIGN
@@ -83,6 +83,8 @@ primary_expression
 	{ $$ = new ast_identifier_expression($1); }
 	| constant
 	{ $$ = $1; }
+	| STRING_LITERAL
+	{ $$ = new ast_string_expression($1); }
 	| '(' expression ')'
 	{ $$ = $2; }
 	;
@@ -239,7 +241,9 @@ parameter_list
 
 parameter_declaration
 	: declaration_specifiers IDENTIFIER
-	{ $$ = new ast_parameter_declaration($1, $2); }
+	{ $$ = new ast_parameter_declaration($1, $2, false); }
+	| declaration_specifiers '*' IDENTIFIER
+	{ $$ = new ast_parameter_declaration($1, $3, true); }
 	;
 
 statement

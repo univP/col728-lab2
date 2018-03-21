@@ -28,6 +28,7 @@ Symbol
     Char = id_table.add_string("char"),
     Int = id_table.add_string("int"),
     Float = id_table.add_string("float"),
+    Str = id_table.add_string("char*"),
     Undefined = id_table.add_string(".undefined"),
     No_type = id_table.add_string(".no_type");
 
@@ -39,7 +40,7 @@ struct MethodType {
 llvm::LLVMContext llvm_context;
 llvm::IRBuilder<> builder(llvm_context);
 std::unique_ptr<llvm::Module> module;
-SymTable<Symbol, llvm::AllocaInst> named_values;
+SymTable<Symbol, llvm::Value> named_values;
 SymTable<Symbol, std::string> named_types;
 std::map<Symbol, ast_function_declarator*> fun_decls;
 SymTable<Symbol, std::string> variable_table;
@@ -80,6 +81,59 @@ main(int argc, char **argv)
     }
 
     program->CodeGen();
+    
+    llvm::InitializeAllTargetInfos();
+    llvm::InitializeAllTargets();
+    llvm::InitializeAllTargetMCs();
+    llvm::InitializeAllAsmParsers();
+    llvm::InitializeAllAsmPrinters();
+
+    auto TargetTriple = llvm::sys::getDefaultTargetTriple();
+    module->setTargetTriple(TargetTriple);
+
+    std::string Error;
+    auto Target = llvm::TargetRegistry::lookupTarget(TargetTriple, Error);
+
+    // Print an error and exit if we couldn't find the requested target.
+    // This generally occurs if we've forgotten to initialise the
+    // TargetRegistry or we have a bogus target triple.
+    if (!Target) {
+        llvm::errs() << Error;
+        return 1;
+    }
+
+    auto CPU = "generic";
+    auto Features = "";
+
+    llvm::TargetOptions opt;
+    auto RM = llvm::Optional<llvm::Reloc::Model>();
+    auto TheTargetMachine =
+        Target->createTargetMachine(TargetTriple, CPU, Features, opt, RM);
+
+    module->setDataLayout(TheTargetMachine->createDataLayout());
+
+    auto Filename = "output.o";
+    std::error_code EC;
+    llvm::raw_fd_ostream dest(Filename, EC, llvm::sys::fs::F_None);
+
+    if (EC) {
+        llvm::errs() << "Could not open file: " << EC.message();
+        return 1;
+    }
+
+    llvm::legacy::PassManager pass;
+    auto FileType = llvm::TargetMachine::CGFT_ObjectFile;
+
+    if (TheTargetMachine->addPassesToEmitFile(pass, dest, FileType)) {
+        llvm::errs() << "TheTargetMachine can't emit a file of this type";
+        return 1;
+    }
+
+    pass.run(*module);
+    dest.flush();
+
+    llvm::outs() << "Wrote " << Filename << "\n";
+
     exit(0);
 }
 
@@ -139,7 +193,14 @@ void ast_external_declaration::CodeGen() {
 
 llvm::Value* ast_identifier_expression::CodeGen() {
     llvm::Value* value = named_values.lookup(identifier);
-    set_type(named_types.lookup(identifier));
+
+    if (value == NULL) {
+        errors.push_back("Variable not in scope.");
+        return nullptr;
+    } else {
+        set_type(named_types.lookup(identifier));
+    }
+    
     return builder.CreateLoad(value, identifier->c_str());
 }
 
@@ -156,6 +217,23 @@ llvm::Value* ast_f_constant::CodeGen() {
     return llvm::ConstantFP::get(llvm_context, llvm::APFloat(val));
 }
 
+llvm::Value* ast_string_expression::CodeGen() {
+    set_type(Str);
+    llvm::Constant* strConstant = llvm::ConstantDataArray::getString(
+        llvm_context, *string_literal);
+    llvm::GlobalVariable* GVStr =
+        new llvm::GlobalVariable(*module, strConstant->getType(), true,
+            llvm::GlobalValue::PrivateLinkage, strConstant);
+    llvm::Constant* zero = llvm::Constant::getNullValue(
+        llvm::IntegerType::getInt32Ty(llvm_context));
+    llvm::Constant* indices[] = {zero, zero};
+    llvm::Type* str_type = llvm::ArrayType::get(llvm::Type::getInt8Ty(llvm_context),
+        string_literal->size()+1);
+    llvm::Constant* strVal = llvm::ConstantExpr::getGetElementPtr(
+        str_type, GVStr, indices, true);
+    return strVal;
+}
+
 llvm::Value* ast_no_expression::CodeGen() {
     set_type(Undefined);
     return NULL;
@@ -165,15 +243,29 @@ Symbol ast_type_specifier::get_type_specifier() {
     return type_specifier;
 }
 
-llvm::Type* get_llvm_type(Symbol type_specifier) {
-    if (type_specifier == Int) {
-        return llvm::Type::getInt32Ty(llvm_context);
-    } else if (type_specifier == Float) {
-        return llvm::Type::getFloatTy(llvm_context);
-    } else if (type_specifier == Void) {
-        return llvm::Type::getVoidTy(llvm_context);
-    } else if (type_specifier == Char) {
-        return llvm::Type::getInt8Ty(llvm_context);
+llvm::Type* get_llvm_type(Symbol type_specifier, bool pointer) {
+    if (pointer) {
+        if (type_specifier == Int) {
+            return llvm::Type::getInt32PtrTy(llvm_context);
+        } else if (type_specifier == Float) {
+            return llvm::Type::getFloatPtrTy(llvm_context);
+        } else if (type_specifier == Void) {
+            return llvm::Type::getInt8PtrTy(llvm_context);
+        } else if (type_specifier == Char) {
+            return llvm::Type::getInt8PtrTy(llvm_context);
+        }
+    } else {
+        if (type_specifier == Int) {
+            return llvm::Type::getInt32Ty(llvm_context);
+        } else if (type_specifier == Float) {
+            return llvm::Type::getFloatTy(llvm_context);
+        } else if (type_specifier == Void) {
+            return llvm::Type::getVoidTy(llvm_context);
+        } else if (type_specifier == Char) {
+            return llvm::Type::getInt8Ty(llvm_context);
+        } else if (type_specifier == Str) {
+            return llvm::Type::getInt8PtrTy(llvm_context);
+        }
     }
 
     my_assert(0, __LINE__, __FILE__);
@@ -190,6 +282,11 @@ llvm::Value* get_default_value(llvm::Type* type) {
     } else if (type->isIntegerTy(8)) {
         return llvm::ConstantInt::get(llvm_context, 
             llvm::APInt(8, 0, true));
+    } else if (type->isPointerTy() && (
+        type->getPointerElementType())->isIntegerTy(8)) {
+            llvm::StringRef string_ref("");
+            return llvm::ConstantDataArray::getString(llvm_context,
+                string_ref);
     }
 
     my_assert(0, __LINE__, __FILE__);
@@ -205,6 +302,9 @@ Symbol get_symbol_type(llvm::Type* type) {
         return Void;
     } else if (type->isIntegerTy(8)) {
         return Char;
+    } else if (type->isPointerTy() && (
+        type->getPointerElementType())->isIntegerTy(8)) {
+            return Str;
     }
 
     my_assert(0, __LINE__, __FILE__);
@@ -212,7 +312,8 @@ Symbol get_symbol_type(llvm::Type* type) {
 }
 
 void ast_declaration::CodeGenGlobal() {
-    llvm::Type* type = get_llvm_type(type_specifier->get_type_specifier());
+    llvm::Type* type = ::get_llvm_type(type_specifier->get_type_specifier(), 
+        false);
 
     for (ListI lit = init_declarators->begin(); 
             lit != init_declarators->end(); lit++) {
@@ -246,10 +347,13 @@ void ast_identifier_declarator::CodeGenGlobal(llvm::Type* type) {
         /*Initializer=*/0, // has initializer, specified below
         /*Name=*/identifier->c_str());
     var->setAlignment(4);
+    named_values.insert(identifier, var);
+    named_types.insert(identifier, ::get_symbol_type(type));
 }
 
 void ast_declaration::CodeGenLocal() {
-    llvm::Type* type = ::get_llvm_type(type_specifier->get_type_specifier());
+    llvm::Type* type = ::get_llvm_type(type_specifier->get_type_specifier(),
+        false);
 
     for (ListI lit = init_declarators->begin();
         lit != init_declarators->end(); lit++) {
@@ -300,7 +404,8 @@ llvm::Function* ast_function_declarator::CodeGenGlobal(llvm::Type* type){
     for(ListI lit = parameter_declarations->begin(); 
         lit!= parameter_declarations->end(); lit++){
             Symbol type = (*lit)->get_type();
-            arg_types.push_back(::get_llvm_type(type));
+            bool pointer = (*lit)->is_pointer();
+            arg_types.push_back(::get_llvm_type(type, pointer));
     }
 
     llvm::FunctionType* function_type = llvm::FunctionType::get(type, 
@@ -327,7 +432,8 @@ llvm::Function* ast_function_definition::CodeGen() {
     ast_function_declarator* fun_decl = declarator->get_fun_decl();
     fun_decls.insert(make_pair(fun_decl->get_identifier(), fun_decl));
     Symbol return_type = type_specifier->get_type_specifier();
-    llvm::Function* function = ::get_function(::get_llvm_type(return_type), fun_decl->get_identifier());
+    llvm::Function* function = ::get_function(::get_llvm_type(return_type,
+        false), fun_decl->get_identifier());
     llvm::FunctionType* function_type = function->getFunctionType();
     llvm::BasicBlock* basic_block = llvm::BasicBlock::Create(
         llvm_context, "entry", function);
@@ -481,7 +587,6 @@ llvm::Value* ast_eq_expression::CodeGen(){
     }
 }
 
-
 llvm::Value* ast_assign_expression::CodeGen(){
     
     llvm::Value* e_val = expression->CodeGen();
@@ -489,11 +594,14 @@ llvm::Value* ast_assign_expression::CodeGen(){
         return nullptr;
     
     llvm::Value* v_address = named_values.lookup(identifier);
-    if(!v_address)
+    if(!v_address) {
+        errors.push_back("Variable not in scope.");
         return nullptr;
+    } else {
+        builder.CreateStore(e_val, v_address);
+        set_type(named_types.lookup(identifier));
+    }
 
-    builder.CreateStore(e_val, v_address); 
-    set_type(named_types.lookup(identifier));
     return e_val;  
 }
 
@@ -620,14 +728,20 @@ std::ostream& ast_identifier_expression::print_struct(int d, std::ostream& s) {
 }
 
 std::ostream& ast_i_constant::print_struct(int d, std::ostream& s) {
-    pad(d, s) << *i_constant << ": " << *get_type() << std::endl;
     set_type(Int);
+    pad(d, s) << *i_constant << ": " << *get_type() << std::endl;
     return s;
 }
 
 std::ostream& ast_f_constant::print_struct(int d, std::ostream& s) {
-    pad(d, s) << *f_constant << ": " << *get_type() << std::endl;
     set_type(Float);
+    pad(d, s) << *f_constant << ": " << *get_type() << std::endl;
+    return s;
+}
+
+std::ostream& ast_string_expression::print_struct(int d, std::ostream& s) {
+    set_type(Str);
+    pad(d, s) << *string_literal << ": " << *get_type() << std::endl;
     return s;
 }
 
@@ -715,13 +829,11 @@ std::ostream& ast_no_expression::print_struct(int d, std::ostream& s) {
 
 std::ostream& ast_function_definition::print_struct(int d, std::ostream& s) {
     variable_table.enter_scope();
-    method_table.enter_scope();
     pad(d, s) << ".function_definition" << std::endl;
     type_specifier->print_struct(d+1, s);
     declarator->print_struct(d+1, s, type_specifier->get_type_specifier());
     compound_statement->print_struct(d+1, s);
     variable_table.exit_scope();
-    method_table.exit_scope();
     return s;
 }
 
@@ -754,7 +866,15 @@ std::ostream& ast_postfix_expression::print_struct(int d, std::ostream& s) {
     pad(d+1, s)<<*function_name <<std::endl;
     for(argI ait = arguments->begin(); ait!= arguments->end(); ait++){
         (*ait)->print_struct(d+1, s);
-    }     
+    }
+    MethodType* method_type = method_table.lookup(function_name);
+    
+    if (!method_type) {
+        errors.push_back("Method not in scope.");
+    } else {
+        set_type(method_type->return_type);
+    }
+
     return s;
 }
 
