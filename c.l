@@ -92,16 +92,16 @@ static int check_type(void);
 {L}{A}*					{ 
     yylval.symbol = id_table.add_string(yytext); return check_type(); }
 
-{HP}{H}+{IS}?				{ 
+{HP}{H}+{IS}?				{ // hexadecimal
     yylval.symbol = int_table.add_string(yytext); return I_CONSTANT; }
 
-{NZ}{D}*{IS}?				{ 
+{NZ}{D}*{IS}?				{ // decimal
     yylval.symbol = int_table.add_string(yytext); return I_CONSTANT; }
 
-"0"{O}*{IS}?				{ 
+"0"{O}*{IS}?				{ // octal
     yylval.symbol = int_table.add_string(yytext); return I_CONSTANT; }
 
-{CP}?"'"([^'\\\n]|{ES})+"'"		{ 
+{CP}?"'"([^'\\\n]|{ES})+"'"		{ // char
     yylval.symbol = int_table.add_string(yytext); return I_CONSTANT; }
 
 {D}+{E}{FS}?				{ 

@@ -29,6 +29,8 @@ public:
     }
     
     DAT* lookup(SYM sym) {
+        my_assert(tbl.size(), __LINE__, __FILE__);
+        
         for (ListI lit = tbl.rbegin(); lit != tbl.rend(); lit++) {
             Scope* scope = *lit;
             MapI sit = scope->find(sym);

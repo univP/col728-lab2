@@ -35,6 +35,7 @@ Symbol
 struct MethodType {
     Symbol return_type;
     std::vector<Symbol> param_types;
+    bool variadic;
 };
 
 llvm::LLVMContext llvm_context;
@@ -205,7 +206,42 @@ llvm::Value* ast_identifier_expression::CodeGen() {
 }
 
 llvm::Value* ast_i_constant::CodeGen() {
-    int val = atoi(i_constant->c_str());
+    int val;
+    
+    if ((*i_constant)[0] == '\'') {
+        if ((*i_constant)[1] == '\\') {
+            switch((*i_constant)[2]) {
+                case 'a':
+                    val = '\a';
+                    break;
+                case 'b':
+                    val = '\b';
+                    break;
+                case 'f':
+                    val = '\f';
+                    break;
+                case 'n':
+                    val = '\n';
+                    break;
+                case 'r':
+                    val = '\r';
+                    break;
+                case 't':
+                    val = '\t';
+                    break;
+                case 'v':
+                    val = '\v';
+                    break;
+                default:
+                    val = (*i_constant)[2];
+            }
+        } else {
+            val = (*i_constant)[1];
+        }
+    } else {
+        val = atoi(i_constant->c_str());
+    }
+
     set_type(Int);
     return llvm::ConstantInt::get(llvm_context, 
         llvm::APInt(32, val, true));
@@ -477,15 +513,22 @@ void ast_block_item::CodeGen() {
 }
 
 llvm::Value* ast_postfix_expression::CodeGen(){
-
     llvm::Function* function = module->getFunction(*function_name);
-    if(function->arg_size() != arguments->size())
-        my_assert(0, __LINE__, __FILE__);
+
+    if (!function) {
+        return nullptr;
+    }
+
+    if(!(function->isVarArg()) && 
+        function->arg_size() != arguments->size()) {
+        return nullptr;
+    }
 
     std::vector<llvm::Value*> ArgsV;
     for(argI ait = arguments->begin(); ait!= arguments->end(); ait++){
         ArgsV.push_back((*ait)->CodeGen());
     }
+    
     return builder.CreateCall(function, ArgsV, "calltmp");
 }
 
@@ -792,6 +835,7 @@ std::ostream& ast_function_declarator::print_struct(int d, std::ostream& s,
     MethodType* method_type = new MethodType;
     method_type->return_type = type;
     method_type->param_types = param_types;
+    method_type->variadic = parameter_types->is_variadic();
     method_table.insert(identifier, method_type);
     return s;
 }

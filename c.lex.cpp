@@ -1330,25 +1330,25 @@ YY_RULE_SETUP
 case 49:
 YY_RULE_SETUP
 #line 95 "c.l"
-{ 
+{ // hexadecimal
     yylval.symbol = int_table.add_string(yytext); return I_CONSTANT; }
 	YY_BREAK
 case 50:
 YY_RULE_SETUP
 #line 98 "c.l"
-{ 
+{ // decimal
     yylval.symbol = int_table.add_string(yytext); return I_CONSTANT; }
 	YY_BREAK
 case 51:
 YY_RULE_SETUP
 #line 101 "c.l"
-{ 
+{ // octal
     yylval.symbol = int_table.add_string(yytext); return I_CONSTANT; }
 	YY_BREAK
 case 52:
 YY_RULE_SETUP
 #line 104 "c.l"
-{ 
+{ // char
     yylval.symbol = int_table.add_string(yytext); return I_CONSTANT; }
 	YY_BREAK
 case 53:
