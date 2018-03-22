@@ -1,28 +1,46 @@
 int printf(char* format, ...);
 
-int fact_rec(int n) {
-    if (n == 0) {
+int is_odd(int n) {
+    return n%2;
+}
+
+int is_vowel(char c) {
+    if (c < 'a') {
+        return 0;
+    }
+
+    if ('z' < c) {
+        return 0;
+    }
+
+    if (c == 'a') {
         return 1;
     }
 
-    return n * fact_rec(n-1);
-}
-
-int fact_iter(int n) {
-    int i, result;
-    result = 1;
-
-    for (i = 1; i <= n; i = i + 1) {
-        result = result * i;
+    if (c == 'e') {
+        return 1;
     }
 
-    return result;
+    if (c == 'i') {
+        return 1;
+    }
+
+    if (c == 'o') {
+        return 1;
+    }
+
+    if (c == 'u') {
+        return 1;
+    }
+
+    return 0;
 }
 
 int main() {
-    printf("Fact Rec: %d\n", fact_rec(0));
-    printf("Fact Iter: %d\n", fact_iter(0));
-    printf("Fact Rec: %d\n", fact_rec(6));
-    printf("Fact Iter: %d\n", fact_iter(6));
+    printf("is_odd(3): %d\n", is_odd(3));
+    printf("is_odd(6): %d\n", is_odd(6));
+    printf("is_vowel('i'): %d\n", is_vowel('i'));
+    printf("is_vowel('g'): %d\n", is_vowel('g'));
+    printf("is_vowel('6'): %d\n", is_vowel('6'));
     return 0;
 }

@@ -242,6 +242,18 @@ Symbol get_symbol_type(llvm::Type* type) {
     return NULL;
 }
 
+bool is_same_type(Symbol s1, Symbol s2) {
+    if (s1 == Char) {
+        s1 = Int;
+    }
+
+    if (s2 == Char) {
+        s2 = Int;
+    }
+
+    return s1 == s2;
+}
+
 // Function may either be declared already or inserted into the map
 //  before calling this function. This checks at both places and returns
 //  the function template.
@@ -623,7 +635,8 @@ llvm::Value* ast_mul_expression::CodeGen(){
     llvm::Value* e1_eval = e1->CodeGen();
     llvm::Value* e2_eval = e2->CodeGen();
 
-    if (e1->get_type() == Int && e2->get_type() == Int){
+    if (is_same_type(e1->get_type(), Int) && 
+            is_same_type(e2->get_type(), Int)){
         set_type(Int);
         return builder.CreateMul(e1_eval, e2_eval, "multmp");
     } else if (e1->get_type() == Float && e2->get_type() == Float) {
@@ -638,7 +651,8 @@ llvm::Value* ast_div_expression::CodeGen(){
     llvm::Value* e1_eval = e1->CodeGen();
     llvm::Value* e2_eval = e2->CodeGen();
 
-    if (e1->get_type() == Int && e2->get_type() == Int){
+    if (is_same_type(e1->get_type(), Int) && 
+            is_same_type(e2->get_type(), Int)){
         set_type(Int);
         return builder.CreateSDiv(e1_eval, e2_eval, "divtmp");
     } else if (e1->get_type() == Float && e2->get_type() == Float) {
@@ -653,7 +667,8 @@ llvm::Value* ast_mod_expression::CodeGen(){
     llvm::Value* e1_eval = e1->CodeGen();
     llvm::Value* e2_eval = e2->CodeGen();
 
-    if (e1->get_type() == Int && e2->get_type() == Int){
+    if (is_same_type(e1->get_type(), Int) && 
+            is_same_type(e2->get_type(), Int)){
         set_type(Int);
         return builder.CreateSRem(e1_eval, e2_eval, "modtmp");
     } else if (e1->get_type() == Float && e2->get_type() == Float) {
@@ -668,7 +683,8 @@ llvm::Value* ast_add_expression::CodeGen(){
     llvm::Value* e1_eval = e1->CodeGen();
     llvm::Value* e2_eval = e2->CodeGen();
 
-    if (e1->get_type() == Int && e2->get_type() == Int){
+    if (is_same_type(e1->get_type(), Int) && 
+            is_same_type(e2->get_type(), Int)){
         set_type(Int);
         return builder.CreateAdd(e1_eval, e2_eval, "addtmp");
     }else if (e1->get_type() == Float && e2->get_type() == Float) {
@@ -684,7 +700,8 @@ llvm::Value* ast_sub_expression::CodeGen(){
     llvm::Value* e1_eval = e1->CodeGen();
     llvm::Value* e2_eval = e2->CodeGen();
 
-    if (e1->get_type() == Int && e2->get_type() == Int){
+    if (is_same_type(e1->get_type(), Int) && 
+            is_same_type(e2->get_type(), Int)){
         set_type(Int);
         return builder.CreateSub(e1_eval, e2_eval, "subtmp");
     }else if (e1->get_type() == Float && e2->get_type() == Float) {
@@ -701,10 +718,11 @@ llvm::Value* ast_less_expression::CodeGen(){
     llvm::Value* e1_eval = e1->CodeGen();
     llvm::Value* e2_eval = e2->CodeGen();
 
-    if (e1->get_type() == Int && e2->get_type() == Int){
+    if (is_same_type(e1->get_type(), Int) && 
+            is_same_type(e2->get_type(), Int)){
         set_type(Int);
         return builder.CreateICmpSLT(e1_eval, e2_eval, "lesstmp");
-    }else if (e1->get_type() == Float && e2->get_type() == Float) {
+    } else if (e1->get_type() == Float && e2->get_type() == Float) {
         set_type(Float);
         return builder.CreateFCmpOLT(e1_eval, e2_eval, "lesstmp");
     }
@@ -716,7 +734,8 @@ llvm::Value* ast_leq_expression::CodeGen(){
     llvm::Value* e1_eval = e1->CodeGen();
     llvm::Value* e2_eval = e2->CodeGen();
 
-    if (e1->get_type() == Int && e2->get_type() == Int){
+    if (is_same_type(e1->get_type(), Int) && 
+            is_same_type(e2->get_type(), Int)){
         set_type(Int);
         return builder.CreateICmpSLE(e1_eval, e2_eval, "leqtmp");
     }else if (e1->get_type() == Float && e2->get_type() == Float) {
@@ -732,10 +751,11 @@ llvm::Value* ast_eq_expression::CodeGen(){
     llvm::Value* e1_eval = e1->CodeGen();
     llvm::Value* e2_eval = e2->CodeGen();
 
-    if (e1->get_type() == Int && e2->get_type() == Int){
+    if (is_same_type(e1->get_type(), Int) && 
+            is_same_type(e2->get_type(), Int)) {
         set_type(Int);
         return builder.CreateICmpEQ(e1_eval, e2_eval, "eqtmp");
-    }else if (e1->get_type() == Float && e2->get_type() == Float) {
+    } else if (e1->get_type() == Float && e2->get_type() == Float) {
         set_type(Float);
         return builder.CreateFCmpOEQ(e1_eval, e2_eval, "eqtmp");
     }
@@ -1065,8 +1085,8 @@ std::ostream& ast_postfix_expression::print_struct(int d, std::ostream& s) {
     for(argI ait = arguments->begin(); ait!= arguments->end(); ait++){
         (*ait)->print_struct(d+1, s);
 
-        if (!method_type->variadic && 
-                method_type->param_types[index] != (*ait)->get_type()) {
+        if (!method_type->variadic && !is_same_type(
+                method_type->param_types[index], (*ait)->get_type())) {
             errors.push_back("Incorrect type of actual argument.");
             return s;
         }
@@ -1083,7 +1103,7 @@ std::ostream& ast_unary_expression::print_struct(int d, std::ostream& s) {
     pad(d+1, s)<<unary <<std::endl;
     expression->print_struct(d+1, s);
 
-    if (expression->get_type() != Int) {
+    if (!is_same_type(expression->get_type(), Int)) {
         errors.push_back("Invalid type of argument.");
     } else {
         set_type(Int);
@@ -1097,7 +1117,8 @@ std::ostream& ast_add_expression::print_struct(int d, std::ostream& s) {
     e1->print_struct(d+1, s);  
     e2->print_struct(d+1, s); 
 
-    if (e1->get_type() == Int && e2->get_type() == Int) {
+    if (is_same_type(e1->get_type(), Int) && 
+            is_same_type(e2->get_type(), Int)) {
         set_type(Int);
     } else if (e1->get_type() == Float && e2->get_type() == Float) {
         set_type(Float);
@@ -1113,7 +1134,8 @@ std::ostream& ast_sub_expression::print_struct(int d, std::ostream& s) {
     e1->print_struct(d+1, s);  
     e2->print_struct(d+1, s); 
 
-    if (e1->get_type() == Int && e2->get_type() == Int) {
+    if (is_same_type(e1->get_type(), Int) && 
+            is_same_type(e2->get_type(), Int)) {
         set_type(Int);
     } else if (e1->get_type() == Float && e2->get_type() == Float) {
         set_type(Float);
@@ -1129,7 +1151,8 @@ std::ostream& ast_mul_expression::print_struct(int d, std::ostream& s) {
     e1->print_struct(d+1, s);  
     e2->print_struct(d+1, s); 
 
-    if (e1->get_type() == Int && e2->get_type() == Int) {
+    if (is_same_type(e1->get_type(), Int) && 
+            is_same_type(e2->get_type(), Int)) {
         set_type(Int);
     } else if (e1->get_type() == Float && e2->get_type() == Float) {
         set_type(Float);
@@ -1145,7 +1168,8 @@ std::ostream& ast_div_expression::print_struct(int d, std::ostream& s) {
     e1->print_struct(d+1, s);  
     e2->print_struct(d+1, s); 
 
-    if (e1->get_type() == Int && e2->get_type() == Int) {
+    if (is_same_type(e1->get_type(), Int) && 
+            is_same_type(e2->get_type(), Int)) {
         set_type(Int);
     } else if (e1->get_type() == Float && e2->get_type() == Float) {
         set_type(Float);
@@ -1161,7 +1185,8 @@ std::ostream& ast_mod_expression::print_struct(int d, std::ostream& s) {
     e1->print_struct(d+1, s);  
     e2->print_struct(d+1, s); 
 
-    if (e1->get_type() == Int && e2->get_type() == Int) {
+    if (is_same_type(e1->get_type(), Int) && 
+            is_same_type(e2->get_type(), Int)) {
         set_type(Int);
     } else if (e1->get_type() == Float && e2->get_type() == Float) {
         set_type(Float);
@@ -1177,7 +1202,8 @@ std::ostream& ast_less_expression::print_struct(int d, std::ostream& s) {
     e1->print_struct(d+1, s);  
     e2->print_struct(d+1, s); 
 
-    if (e1->get_type() == Int && e2->get_type() == Int) {
+    if (is_same_type(e1->get_type(), Int) && 
+            is_same_type(e2->get_type(), Int)) {
         set_type(Int);
     } else if (e1->get_type() == Float && e2->get_type() == Float) {
         set_type(Float);
@@ -1193,7 +1219,8 @@ std::ostream& ast_leq_expression::print_struct(int d, std::ostream& s) {
     e1->print_struct(d+1, s);  
     e2->print_struct(d+1, s); 
 
-    if (e1->get_type() == Int && e2->get_type() == Int) {
+    if (is_same_type(e1->get_type(), Int) && 
+            is_same_type(e2->get_type(), Int)) {
         set_type(Int);
     } else if (e1->get_type() == Float && e2->get_type() == Float) {
         set_type(Int);
@@ -1210,7 +1237,8 @@ std::ostream& ast_eq_expression::print_struct(int d, std::ostream& s) {
     e1->print_struct(d+1, s);  
     e2->print_struct(d+1, s);  
   
-    if (e1->get_type() == Int && e2->get_type() == Int) {
+    if (is_same_type(e1->get_type(), Int) && 
+            is_same_type(e2->get_type(), Int)) {
         set_type(Int);
     } else if (e1->get_type() == Float && e2->get_type() == Float) {
         set_type(Float);
@@ -1230,7 +1258,7 @@ std::ostream& ast_assign_expression::print_struct(int d, std::ostream& s) {
 
     if (!type) {
         errors.push_back("Assigned to undeclared variable " + *identifier);
-    } else if (type != expression->get_type()) {
+    } else if (!is_same_type(expression->get_type(), type)) {
         errors.push_back("In assignment expected: " + *type + " ,got: " 
             + *expression->get_type());
     } else {
