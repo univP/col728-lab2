@@ -13,12 +13,216 @@
 									format
 
 	.external_declaration
-		.declaration
+		.function_definition
 			int
-			.init_declarator
-				.declarator
-					.direct_declarator
-						x
+			.declarator
+				.direct_declarator
+					.function_declarator
+						is_odd
+						.parameter_type_list
+							.parameter_declaration
+								int
+								n
+			.compound_statement
+				.block_item
+					.jump_statement
+						.mod_expression
+							n: int
+							2: int
+
+	.external_declaration
+		.function_definition
+			int
+			.declarator
+				.direct_declarator
+					.function_declarator
+						is_vowel
+						.parameter_type_list
+							.parameter_declaration
+								char
+								c
+			.compound_statement
+				.block_item
+					.uid_statement
+						.less_expression
+							c: char
+							'a': int
+						.compound_statement
+							.block_item
+								.jump_statement
+									0: int
+				.block_item
+					.uid_statement
+						.less_expression
+							'z': int
+							c: char
+						.compound_statement
+							.block_item
+								.jump_statement
+									0: int
+				.block_item
+					.uid_statement
+						.equality_expression
+							c: char
+							'a': int
+						.compound_statement
+							.block_item
+								.jump_statement
+									1: int
+				.block_item
+					.uid_statement
+						.equality_expression
+							c: char
+							'e': int
+						.compound_statement
+							.block_item
+								.jump_statement
+									1: int
+				.block_item
+					.uid_statement
+						.equality_expression
+							c: char
+							'i': int
+						.compound_statement
+							.block_item
+								.jump_statement
+									1: int
+				.block_item
+					.uid_statement
+						.equality_expression
+							c: char
+							'o': int
+						.compound_statement
+							.block_item
+								.jump_statement
+									1: int
+				.block_item
+					.uid_statement
+						.equality_expression
+							c: char
+							'u': int
+						.compound_statement
+							.block_item
+								.jump_statement
+									1: int
+				.block_item
+					.jump_statement
+						0: int
+
+	.external_declaration
+		.function_definition
+			int
+			.declarator
+				.direct_declarator
+					.function_declarator
+						is_leap_year
+						.parameter_type_list
+							.parameter_declaration
+								int
+								year
+			.compound_statement
+				.block_item
+					.mid_statement
+						.equality_expression
+							.mod_expression
+								year: int
+								400: int
+							0: int
+						.jump_statement
+							1: int
+						.mid_statement
+							.equality_expression
+								.mod_expression
+									year: int
+									100: int
+								0: int
+							.jump_statement
+								0: int
+							.mid_statement
+								.equality_expression
+									.mod_expression
+										year: int
+										4: int
+									0: int
+								.jump_statement
+									1: int
+								.jump_statement
+									0: int
+				.block_item
+					.jump_statement
+						0: int
+
+	.external_declaration
+		.function_definition
+			int
+			.declarator
+				.direct_declarator
+					.function_declarator
+						sum_digits
+						.parameter_type_list
+							.parameter_declaration
+								int
+								n
+			.compound_statement
+				.block_item
+					.declaration
+						int
+						.init_declarator
+							.declarator
+								.direct_declarator
+									sum
+						.init_declarator
+							.declarator
+								.direct_declarator
+									t
+						.init_declarator
+							.declarator
+								.direct_declarator
+									rem
+				.block_item
+					.expression_statement
+						.assign_expression
+							sum
+							0: int
+				.block_item
+					.expression_statement
+						.assign_expression
+							t
+							n: int
+				.block_item
+					.for_statement
+						.expression_statement
+							.no_expression
+						.expression_statement
+							.less_expression
+								0: int
+								t: int
+						.no_expression
+						.compound_statement
+							.block_item
+								.expression_statement
+									.assign_expression
+										rem
+										.mod_expression
+											t: int
+											10: int
+							.block_item
+								.expression_statement
+									.assign_expression
+										sum
+										.add_expression
+											sum: int
+											rem: int
+							.block_item
+								.expression_statement
+									.assign_expression
+										t
+										.div_expression
+											t: int
+											10: int
+				.block_item
+					.jump_statement
+						sum: int
 
 	.external_declaration
 		.function_definition
@@ -31,28 +235,76 @@
 			.compound_statement
 				.block_item
 					.expression_statement
-						.assign_expression
-							x
-							5: int
-				.block_item
-					.declaration
-						int
-						.init_declarator
-							.declarator
-								.direct_declarator
-									x
-				.block_item
-					.expression_statement
-						.assign_expression
-							x
-							10: int
+						.post_expression
+							printf
+							is_odd(3): %d
+: string
+							.post_expression
+								is_odd
+								3: int
 				.block_item
 					.expression_statement
 						.post_expression
 							printf
-							x: %d
+							is_odd(6): %d
 : string
-							x: int
+							.post_expression
+								is_odd
+								6: int
+				.block_item
+					.expression_statement
+						.post_expression
+							printf
+							is_vowel('i'): %d
+: string
+							.post_expression
+								is_vowel
+								'i': int
+				.block_item
+					.expression_statement
+						.post_expression
+							printf
+							is_vowel('g'): %d
+: string
+							.post_expression
+								is_vowel
+								'g': int
+				.block_item
+					.expression_statement
+						.post_expression
+							printf
+							is_vowel('6'): %d
+: string
+							.post_expression
+								is_vowel
+								'6': int
+				.block_item
+					.expression_statement
+						.post_expression
+							printf
+							is_leap_year(2012): %d
+: string
+							.post_expression
+								is_leap_year
+								2012: int
+				.block_item
+					.expression_statement
+						.post_expression
+							printf
+							is_leap_year(2100): %d
+: string
+							.post_expression
+								is_leap_year
+								2100: int
+				.block_item
+					.expression_statement
+						.post_expression
+							printf
+							sum_digits(213): %d
+: string
+							.post_expression
+								sum_digits
+								213: int
 				.block_item
 					.jump_statement
 						0: int
