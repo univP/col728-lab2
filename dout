@@ -3,12 +3,12 @@ c.y: warning: 1 shift/reduce conflict [-Wconflicts-sr]
 flex -o c.lex.cpp -l c.l
 g++ c.tab.cpp c.lex.cpp cc.cpp -std=c++11 -g -lm -ll -lfl `llvm-config --libs core mcjit native --cxxflags --ldflags` -o cc
 c.lex.cpp: In function ‘int yy_get_next_buffer()’:
-c.lex.cpp:912:18: warning: comparison between signed and unsigned integer expressions [-Wsign-compare]
+c.lex.cpp:916:18: warning: comparison between signed and unsigned integer expressions [-Wsign-compare]
    for ( n = 0; n < max_size && \
-c.lex.cpp:1901:3: note: in expansion of macro ‘YY_INPUT’
+c.lex.cpp:1905:3: note: in expansion of macro ‘YY_INPUT’
    YY_INPUT( (&YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[number_to_move]),
    ^~~~~~~~
 c.lex.cpp: At global scope:
-c.lex.cpp:2002:17: warning: ‘void yyunput(int, char*)’ defined but not used [-Wunused-function]
+c.lex.cpp:2006:17: warning: ‘void yyunput(int, char*)’ defined but not used [-Wunused-function]
      static void yyunput (int c, char * yy_bp )
                  ^~~~~~~

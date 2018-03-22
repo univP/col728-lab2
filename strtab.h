@@ -35,6 +35,10 @@
 
 #define my_assert(e,l,f) if (!(e)) { std::cerr << "Line: "<< l << ", File: " << f << std::endl; exit(1); }
 
+// Contains all the basic header files necessary for 
+//  Code Generation.
+// Also contains string table storing all Symbols.
+
 typedef std::string* Symbol;
 
 class StrTable : public std::map<std::string, Symbol> {

@@ -35,7 +35,11 @@ static void comment(void);
 static int check_type(void);
 #define YY_DECL extern "C" int yylex()
 
-// Define string tables.
+// Return token text (token type already returned) to be used
+//  by subsequent compiler phases.
+// Convert text to string format in case of string literal.
+// Definition for Symbol and string table is present in 
+//  strtab.h.
 #include "parser.h"
 %}
 

@@ -3,6 +3,8 @@
 
 #include "symtab.h"
 
+// Contains the declarations for ast nodes.
+
 // Forward declarations
 class ast_struct;
 class ast_program;

@@ -3,6 +3,8 @@
 
 #include "context.h"
 
+// Represent the type of each ast node.
+
 union YYSTYPE {
 	ast_program* program;
 	ast_expression* expression;

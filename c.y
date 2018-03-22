@@ -15,6 +15,9 @@ void yyerror(const char *s);
 ast_program* program;
 %}
 
+// union YYSTYPE is present in parser.h
+// tree declarations are in tree.h
+
 %define api.value.type {union YYSTYPE}
 
 %type <program> program

@@ -49,6 +49,14 @@ SymTable<Symbol, std::string> variable_table;
 SymTable<Symbol, MethodType> method_table;
 std::vector<std::string> errors;
 
+// Majorly implements the last two phases namely
+//  semantic analysis and code generation.
+// Prints the abstract syntax tree along with types to semant.tree file.
+// Outputs human readable llvm code to terminal.
+// Outputs object file in output.o
+// Link using clang output.o and execute ./a.out to run the program.
+// Supported grammar can be seen in c.y file.
+
 int
 main(int argc, char **argv)
 {
@@ -60,16 +68,19 @@ main(int argc, char **argv)
     char const *filename = argv[1];
     yyin = fopen(filename, "r");
     assert(yyin != NULL);
+
+    // Parsing phase.
     int retv = yyparse();
     // printf("retv = %d\n", ret);
 
-    // Contains syntax errors.
+    // Catches syntax errors.
     if (retv) {
         std::cerr << "Compilation halted due to lexer/parser errors." 
             << std::endl;
         exit(0);
     }
     
+    // Semantic analysis phase.
     std::ofstream semant_stream;
     std::string file("semant.tree");
     semant_stream.open(file);
@@ -77,7 +88,7 @@ main(int argc, char **argv)
     semant_stream.close();
 
     if (errors.size() != 0) {
-
+        // Print all the errors and halt.
         for (std::string error : errors) {
             std::cerr << error << std::endl;
         }
@@ -87,6 +98,7 @@ main(int argc, char **argv)
         exit(0);
     }
 
+    //  Code Generation phase.
     program->CodeGen();
     
     llvm::InitializeAllTargetInfos();
@@ -147,7 +159,8 @@ main(int argc, char **argv)
 /*------------------------------.
 |   Section 2 : Code generation |
 `------------------------------*/
-
+// We align all the variables before storing them.
+// This is a helper method to retrieve alignment boundary given type.
 unsigned int get_alignment(llvm::Type* type) {
     if (type->isIntegerTy(32)) {
         return 4;
@@ -163,6 +176,7 @@ unsigned int get_alignment(llvm::Type* type) {
     return 0;
 }
 
+// Helper method to retrieve llvm type from type inferred by AST.
 llvm::Type* get_llvm_type(Symbol type_specifier, bool pointer) {
     if (pointer) {
         if (type_specifier == Int) {
@@ -192,6 +206,7 @@ llvm::Type* get_llvm_type(Symbol type_specifier, bool pointer) {
     return NULL;
 }
 
+// We initialize all the variables with a default value depending on the type.
 llvm::Constant* get_default_value(llvm::Type* type) {
     if (type->isIntegerTy(32)) {
         return llvm::ConstantInt::get(llvm_context, 
@@ -210,6 +225,7 @@ llvm::Constant* get_default_value(llvm::Type* type) {
     return NULL;
 }
 
+// Retrieve back AST type from llvm type.
 Symbol get_symbol_type(llvm::Type* type) {
     if (type->isIntegerTy(32)) {
         return Int;
@@ -226,6 +242,9 @@ Symbol get_symbol_type(llvm::Type* type) {
     return NULL;
 }
 
+// Function may either be declared already or inserted into the map
+//  before calling this function. This checks at both places and returns
+//  the function template.
 llvm::Function* get_function(llvm::Type* type, Symbol function_name) {
     llvm::Function* function = module->getFunction(*function_name);
 
@@ -243,6 +262,7 @@ llvm::Function* get_function(llvm::Type* type, Symbol function_name) {
     return NULL;
 }
 
+// We add the local variables to the top of the function block.
 llvm::AllocaInst* CreateEntryBlockAlloca(llvm::Type* type, 
         llvm::Function* function, Symbol local_var) {
     llvm::IRBuilder<> local_builder(&function->getEntryBlock(), 
@@ -250,6 +270,9 @@ llvm::AllocaInst* CreateEntryBlockAlloca(llvm::Type* type,
     return local_builder.CreateAlloca(type, nullptr, *local_var);
 }
 
+// Code generation function defined in appropriate AST nodes.
+// Named values contain the location of the the variable allocated
+//  and Named types contains the type of the variable.
 void ast_program::CodeGen() {
     named_values.enter_scope();
     named_types.enter_scope();
@@ -266,6 +289,8 @@ void ast_program::CodeGen() {
     named_values.exit_scope();
 }
 
+// Since an external declaration can be either a declaration/function_definition
+//  the index determines the value in the union.
 void ast_external_declaration::CodeGen() {
     if (index == 0) {
         data.declaration->CodeGenGlobal();
@@ -276,6 +301,7 @@ void ast_external_declaration::CodeGen() {
     }
 }
 
+// We load at an aligned address since we align all the symbols.
 llvm::Value* ast_identifier_expression::CodeGen() {
     llvm::Value* value = named_values.lookup(identifier);
 
@@ -289,6 +315,8 @@ llvm::Value* ast_identifier_expression::CodeGen() {
         get_type(), false)), identifier->c_str());
 }
 
+// i_constant may either be a character or any of the formats provided in the 
+//  lexer. We need to appropriately convert them to an integer.
 llvm::Value* ast_i_constant::CodeGen() {
     int val;
     
@@ -331,12 +359,14 @@ llvm::Value* ast_i_constant::CodeGen() {
         llvm::APInt(32, val, true));
 }
 
+// Printf accepts a double type.
 llvm::Value* ast_f_constant::CodeGen() {
     double val = atof(f_constant->c_str());
     set_type(Float);
     return llvm::ConstantFP::get(llvm_context, llvm::APFloat(val));
 }
 
+// All string consstants are stored as global variables.
 llvm::Value* ast_string_expression::CodeGen() {
     set_type(Str);
     llvm::Constant* strConstant = llvm::ConstantDataArray::getString(
@@ -356,7 +386,7 @@ llvm::Value* ast_string_expression::CodeGen() {
 }
 
 llvm::Value* ast_no_expression::CodeGen() {
-    set_type(Undefined);
+    set_type(No_type);
     return NULL;
 }
 
@@ -364,6 +394,10 @@ Symbol ast_type_specifier::get_type_specifier() {
     return type_specifier;
 }
 
+// While CodeGen is the function that generates code, sometimes we require 
+//  to generate code differently in local and global contexts (Like defining a
+//  global variable vs local variable). In which case the function name is 
+//  suffixed by the context.
 void ast_declaration::CodeGenGlobal() {
     llvm::Type* type = ::get_llvm_type(type_specifier->get_type_specifier(), 
         false);
@@ -392,6 +426,7 @@ void ast_direct_declarator::CodeGenGlobal(llvm::Type* type) {
     }
 }
 
+// See CodeGen of external declaration.
 void ast_identifier_declarator::CodeGenGlobal(llvm::Type* type) {
     llvm::GlobalVariable* var = new llvm::GlobalVariable(/*Module=*/*module, 
         /*Type=*/type,
@@ -404,6 +439,7 @@ void ast_identifier_declarator::CodeGenGlobal(llvm::Type* type) {
     named_types.insert(identifier, ::get_symbol_type(type));
 }
 
+// Local functions start here.
 void ast_declaration::CodeGenLocal() {
     llvm::Type* type = ::get_llvm_type(type_specifier->get_type_specifier(),
         false);
@@ -430,6 +466,7 @@ void ast_direct_declarator::CodeGenLocal(llvm::Type* type) {
     }
 }
 
+// An aligned store of the default value is done.
 void ast_identifier_declarator::CodeGenLocal(llvm::Type* type) {
     llvm::Function* function = builder.GetInsertBlock()->getParent();
     llvm::AllocaInst* alloca = ::CreateEntryBlockAlloca(type, function, 
@@ -481,6 +518,10 @@ llvm::Function* ast_function_declarator::CodeGenGlobal(llvm::Type* type){
     return function;
 }
 
+// Retrieves arguments and stores them on stack.
+// This makes meeting SSA requirement of LLVM becomes simpler, since
+//  no such restrictions are laid out for data in memory.
+// A new scope is entered inside a function definition over the global scope.
 llvm::Function* ast_function_definition::CodeGen() {
     named_values.enter_scope();
     named_types.enter_scope();
@@ -523,6 +564,7 @@ llvm::Function* ast_function_definition::CodeGen() {
     return function;
 }
 
+// See CodeGen of external declaration.
 void ast_block_item::CodeGen() {
     if (index == 0) {
         data.declaration->CodeGenLocal();
@@ -533,6 +575,8 @@ void ast_block_item::CodeGen() {
     }
 }
 
+// Handles the function dispatch.
+// Expressions (actual arguments) are evaluated in left-right order.
 llvm::Value* ast_postfix_expression::CodeGen(){
     llvm::Function* function = module->getFunction(*function_name);
 
@@ -570,6 +614,11 @@ llvm::Value* ast_unary_expression::CodeGen(){
         return NULL;
 }
 
+// Binary operators come in 3 flavors
+//  1. arithmetic, 2. comparison, 3. boolean
+// Arithmetic operators, we handle all of +, -, *, /, %
+//  however we operate only between two ints or two floats
+//  which is sufficient enough.
 llvm::Value* ast_mul_expression::CodeGen(){
     llvm::Value* e1_eval = e1->CodeGen();
     llvm::Value* e2_eval = e2->CodeGen();
@@ -646,7 +695,8 @@ llvm::Value* ast_sub_expression::CodeGen(){
     return nullptr;
 }
 
-
+// Only comparison operators used are <, <= and ==
+//  inclusion of >, >= is unnecessary
 llvm::Value* ast_less_expression::CodeGen(){
     llvm::Value* e1_eval = e1->CodeGen();
     llvm::Value* e2_eval = e2->CodeGen();
@@ -693,6 +743,7 @@ llvm::Value* ast_eq_expression::CodeGen(){
     return nullptr;
 }
 
+// Assignment expressions are of type id = expression
 llvm::Value* ast_assign_expression::CodeGen(){
     
     llvm::Value* e_val = expression->CodeGen();
@@ -711,6 +762,7 @@ llvm::Value* ast_assign_expression::CodeGen(){
     return e_val;  
 }
 
+// We support both unmatched and matched if then else.
 void ast_mif_statement::CodeGen(){
     llvm::Value* cond_val = condition->CodeGen();
     if(!cond_val)
@@ -761,11 +813,13 @@ void ast_uif_statement::CodeGen(){
     builder.SetInsertPoint(merge_block);    
 }
 
+// Only jump statement used is return statement.
 void ast_jump_statement::CodeGen() {
     llvm::Value* value = expression->CodeGen();
     builder.CreateRet(value);
 }
 
+// All four variants of for loop are supported.
 void ast_for_statement::CodeGen() {
     llvm::Function* function = builder.GetInsertBlock()->getParent();
 
@@ -797,6 +851,7 @@ void ast_for_statement::CodeGen() {
 |   Section 3 : Print AST nodes along with their types. |
 `------------------------------------------------------*/
 
+// Does basic semantic analysis and prints AST nodes in tree format.
 std::ostream& ast_program::print_struct(int d, std::ostream& s) {
     variable_table.enter_scope();
     method_table.enter_scope();

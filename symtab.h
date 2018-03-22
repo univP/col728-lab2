@@ -3,6 +3,8 @@
 
 #include "strtab.h"
 
+// Symbol table used to nest scopes.
+
 template <class SYM, class DAT>
 class SymTable {
     typedef std::map<SYM, DAT*> Scope;

@@ -3,6 +3,9 @@
 
 #include "tree.h"
 
+// Contains declarations of data structures required
+//  for Code generation.
+
 extern llvm::LLVMContext llvm_context;
 extern llvm::IRBuilder<> builder;
 extern std::unique_ptr<llvm::Module> module;
