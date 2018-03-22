@@ -38,6 +38,12 @@
 							'3': int
 							3.14: char*
 				.block_item
+					.expression_statement
+						.post_expression
+							printf
+							Hexadecimal: %x: char*
+							0x20: int
+				.block_item
 					.jump_statement
 						0: int
 
