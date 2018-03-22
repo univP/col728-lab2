@@ -25,10 +25,10 @@ StrTable float_table;
 
 Symbol
     Void = id_table.add_string("void"),
-    Char = id_table.add_string("char"),
     Int = id_table.add_string("int"),
     Float = id_table.add_string("float"),
-    Str = id_table.add_string("char*"),
+    Char = id_table.add_string("char"),
+    Str = id_table.add_string("string"),
     Undefined = id_table.add_string(".undefined"),
     No_type = id_table.add_string(".no_type");
 
@@ -69,8 +69,7 @@ main(int argc, char **argv)
     }
     
     std::ofstream semant_stream;
-    std::string file(__FILE__);
-    file += ".semant";
+    std::string file("semant.tree");
     semant_stream.open(file);
     program->print_struct(0, semant_stream);
     semant_stream.close();
@@ -113,7 +112,7 @@ main(int argc, char **argv)
 
     module->setDataLayout(TheTargetMachine->createDataLayout());
 
-    auto Filename = "output.o";
+    std::string Filename("output.o");
     std::error_code EC;
     llvm::raw_fd_ostream dest(Filename, EC, llvm::sys::fs::F_None);
 
@@ -260,11 +259,12 @@ llvm::Value* ast_string_expression::CodeGen() {
     llvm::GlobalVariable* GVStr =
         new llvm::GlobalVariable(*module, strConstant->getType(), true,
             llvm::GlobalValue::PrivateLinkage, strConstant);
+    GVStr->setAlignment(1);
     llvm::Constant* zero = llvm::Constant::getNullValue(
         llvm::IntegerType::getInt32Ty(llvm_context));
     llvm::Constant* indices[] = {zero, zero};
-    llvm::Type* str_type = llvm::ArrayType::get(llvm::Type::getInt8Ty(llvm_context),
-        string_literal->size()+1);
+    llvm::Type* str_type = llvm::ArrayType::get(llvm::Type::getInt8Ty(
+        llvm_context), string_literal->size()+1);
     llvm::Constant* strVal = llvm::ConstantExpr::getGetElementPtr(
         str_type, GVStr, indices, true);
     return strVal;
@@ -297,10 +297,10 @@ llvm::Type* get_llvm_type(Symbol type_specifier, bool pointer) {
             return llvm::Type::getFloatTy(llvm_context);
         } else if (type_specifier == Void) {
             return llvm::Type::getVoidTy(llvm_context);
-        } else if (type_specifier == Char) {
-            return llvm::Type::getInt8Ty(llvm_context);
         } else if (type_specifier == Str) {
             return llvm::Type::getInt8PtrTy(llvm_context);
+        } else if (type_specifier == Char) {
+            return llvm::Type::getInt32Ty(llvm_context);
         }
     }
 
@@ -308,16 +308,13 @@ llvm::Type* get_llvm_type(Symbol type_specifier, bool pointer) {
     return NULL;
 }
 
-llvm::Value* get_default_value(llvm::Type* type) {
+llvm::Constant* get_default_value(llvm::Type* type) {
     if (type->isIntegerTy(32)) {
         return llvm::ConstantInt::get(llvm_context, 
             llvm::APInt(32, 0, true));
     } else if (type->isFloatTy()) {
         return llvm::ConstantFP::get(llvm_context, 
             llvm::APFloat(0.));
-    } else if (type->isIntegerTy(8)) {
-        return llvm::ConstantInt::get(llvm_context, 
-            llvm::APInt(8, 0, true));
     } else if (type->isPointerTy() && (
         type->getPointerElementType())->isIntegerTy(8)) {
             llvm::StringRef string_ref("");
@@ -336,8 +333,6 @@ Symbol get_symbol_type(llvm::Type* type) {
         return Float;
     } else if (type->isVoidTy()) {
         return Void;
-    } else if (type->isIntegerTy(8)) {
-        return Char;
     } else if (type->isPointerTy() && (
         type->getPointerElementType())->isIntegerTy(8)) {
             return Str;
@@ -345,6 +340,20 @@ Symbol get_symbol_type(llvm::Type* type) {
 
     my_assert(0, __LINE__, __FILE__);
     return NULL;
+}
+
+unsigned get_alignment(llvm::Type* type) {
+    if (type->isIntegerTy(32)) {
+        return 4;
+    } else if (type->isFloatTy()) {
+        return 4;
+    } else if (type->isPointerTy() && (
+        type->getPointerElementType())->isIntegerTy(8)) {
+            return 8;
+    }
+
+    my_assert(0, __LINE__, __FILE__);
+    return 0;
 }
 
 void ast_declaration::CodeGenGlobal() {
@@ -380,7 +389,7 @@ void ast_identifier_declarator::CodeGenGlobal(llvm::Type* type) {
         /*Type=*/type,
         /*isConstant=*/false,
         /*Linkage=*/llvm::GlobalValue::CommonLinkage,
-        /*Initializer=*/0, // has initializer, specified below
+        /*Initializer=*/::get_default_value(type),
         /*Name=*/identifier->c_str());
     var->setAlignment(4);
     named_values.insert(identifier, var);
@@ -415,7 +424,9 @@ void ast_direct_declarator::CodeGenLocal(llvm::Type* type) {
 
 void ast_identifier_declarator::CodeGenLocal(llvm::Type* type) {
     llvm::Function* function = builder.GetInsertBlock()->getParent();
-    llvm::AllocaInst* alloca = ::CreateEntryBlockAlloca(type, function, identifier);
+    llvm::AllocaInst* alloca = ::CreateEntryBlockAlloca(type, function, 
+        identifier);
+    alloca->setAlignment(::get_alignment(type));
     named_values.insert(identifier,alloca);
     named_types.insert(identifier, ::get_symbol_type(type));
     builder.CreateStore(get_default_value(type), alloca);    
@@ -481,6 +492,7 @@ llvm::Function* ast_function_definition::CodeGen() {
         llvm::Type* type = function_type->getParamType(index++);
         llvm::AllocaInst* alloca = ::CreateEntryBlockAlloca(type, function, 
             id_table.add_string(farg.getName()));
+        alloca->setAlignment(::get_alignment(type));
         builder.CreateStore(&farg, alloca);
         named_values.insert(id_table.add_string(farg.getName()),
             alloca);
@@ -816,7 +828,13 @@ std::ostream& ast_init_declarator::print_struct(int d, std::ostream& s,
 std::ostream& ast_identifier_declarator::print_struct(int d, std::ostream& s,
         Symbol type) {
     pad(d, s) << *identifier << std::endl;
-    variable_table.insert(identifier, type);
+
+    if (variable_table.probe(identifier)) {
+        errors.push_back("Redeclaration of variable.");
+    } else {
+        variable_table.insert(identifier, type);
+    }
+
     return s;
 }
 
@@ -836,7 +854,13 @@ std::ostream& ast_function_declarator::print_struct(int d, std::ostream& s,
     method_type->return_type = type;
     method_type->param_types = param_types;
     method_type->variadic = parameter_types->is_variadic();
-    method_table.insert(identifier, method_type);
+    
+    if (method_table.probe(identifier)) {
+        errors.push_back("Redeclaration of method.");
+    } else {
+        method_table.insert(identifier, method_type);
+    }
+
     return s;
 }
 
@@ -844,22 +868,31 @@ std::ostream& ast_parameter_declaration::print_struct(int d, std::ostream& s) {
     pad(d, s) << ".parameter_declaration" << std::endl;
     type_specifier->print_struct(d+1, s);
     pad(d+1,s) << *identifier << std::endl;
-    variable_table.insert(identifier, type_specifier->get_type_specifier());
-    return s;
-}
-
-std::ostream& ast_compound_statement::print_struct(int d, std::ostream& s) {
-    pad(d, s) << ".compound_statement" << std::endl;
-
-    for (ListI lit = block_items->begin(); lit != block_items->end(); lit++) {
-        ast_block_item* block_item = *lit;
-        block_item->print_struct(d+1, s);
+    
+    if (variable_table.probe(identifier)) {
+        errors.push_back("Redeclaration of formal argument.");
+    } else {
+        variable_table.insert(identifier,
+            type_specifier->get_type_specifier());
     }
 
     return s;
 }
 
-std::ostream& ast_expression_statement::print_struct(int d, std::ostream& s) {
+std::ostream& ast_compound_statement::print_struct(int d, std::ostream& s,
+        Symbol type) {
+    pad(d, s) << ".compound_statement" << std::endl;
+
+    for (ListI lit = block_items->begin(); lit != block_items->end(); lit++) {
+        ast_block_item* block_item = *lit;
+        block_item->print_struct(d+1, s, type);
+    }
+
+    return s;
+}
+
+std::ostream& ast_expression_statement::print_struct(int d, std::ostream& s,
+        Symbol type) {
     pad(d, s) << ".expression_statement" << std::endl;
     expression->print_struct(d+1, s);
     return s;
@@ -876,18 +909,20 @@ std::ostream& ast_function_definition::print_struct(int d, std::ostream& s) {
     pad(d, s) << ".function_definition" << std::endl;
     type_specifier->print_struct(d+1, s);
     declarator->print_struct(d+1, s, type_specifier->get_type_specifier());
-    compound_statement->print_struct(d+1, s);
+    compound_statement->print_struct(d+1, s, 
+        type_specifier->get_type_specifier());
     variable_table.exit_scope();
     return s;
 }
 
-std::ostream& ast_block_item::print_struct(int d, std::ostream& s) {
+std::ostream& ast_block_item::print_struct(int d, std::ostream& s,
+        Symbol type) {
     pad(d, s) << ".block_item" << std::endl;
 
     if (index == 0) {
         data.declaration->print_struct(d+1, s);
     } else if (index == 1) {
-        data.statement->print_struct(d+1, s);
+        data.statement->print_struct(d+1, s, type);
     }
 
     return s;
@@ -908,17 +943,32 @@ std::ostream& ast_external_declaration::print_struct(int d, std::ostream& s) {
 std::ostream& ast_postfix_expression::print_struct(int d, std::ostream& s) {
     pad(d, s) << ".post_expression" << std::endl;
     pad(d+1, s)<<*function_name <<std::endl;
-    for(argI ait = arguments->begin(); ait!= arguments->end(); ait++){
-        (*ait)->print_struct(d+1, s);
-    }
     MethodType* method_type = method_table.lookup(function_name);
     
     if (!method_type) {
         errors.push_back("Method not in scope.");
-    } else {
-        set_type(method_type->return_type);
+        return s;
+    } else if (!method_type->variadic && 
+        (method_type->param_types).size() != arguments->size()) {
+            errors.push_back("Incorrect number of arguments");
+            return s;
     }
 
+    int index = 0;
+    
+    for(argI ait = arguments->begin(); ait!= arguments->end(); ait++){
+        (*ait)->print_struct(d+1, s);
+
+        if (!method_type->variadic && 
+                method_type->param_types[index] != (*ait)->get_type()) {
+            errors.push_back("Incorrect type of actual argument.");
+            return s;
+        }
+
+        index++;
+    }
+
+    set_type(method_type->return_type);
     return s;
 }
 
@@ -1071,39 +1121,48 @@ std::ostream& ast_declarator::print_struct(int d, std::ostream& s, Symbol type) 
 }
 
 
-std::ostream& ast_mif_statement::print_struct(int d, std::ostream& s) {
+std::ostream& ast_mif_statement::print_struct(int d, std::ostream& s,
+        Symbol type) {
     pad(d, s) << ".mid_statement" << std::endl;
     condition->print_struct(d+1, s);
-    then_statement->print_struct(d+1, s);
-    else_statement->print_struct(d+1, s);
+    then_statement->print_struct(d+1, s, type);
+    else_statement->print_struct(d+1, s, type);
     return s;
 }
 
-std::ostream& ast_uif_statement::print_struct(int d, std::ostream& s) {
+std::ostream& ast_uif_statement::print_struct(int d, std::ostream& s,
+        Symbol type) {
     pad(d, s) << ".uid_statement" << std::endl;
     condition->print_struct(d+1, s);
-    then_statement->print_struct(d+1, s);
+    then_statement->print_struct(d+1, s, type);
     return s;
 }
 
-std::ostream& ast_jump_statement::print_struct(int d, std::ostream& s) {
+std::ostream& ast_jump_statement::print_struct(int d, std::ostream& s,
+        Symbol type) {
     pad(d, s) << ".jump_statement" << std::endl;
     expression->print_struct(d+1, s);
+
+    if (expression->get_type() != type) {
+        errors.push_back("Incorrect return type");
+    }
+
     return s;
 }
 
-std::ostream& ast_for_statement::print_struct(int d, std::ostream& s) {
+std::ostream& ast_for_statement::print_struct(int d, std::ostream& s,
+        Symbol type) {
     pad(d,s) << ".for_statement" << std::endl;
 
     if (index == 0) {
-        data.expression_statement->print_struct(d+1, s);
+        data.expression_statement->print_struct(d+1, s, type);
     } else if (index == 1) {
         data.declaration->print_struct(d+1, s);
     }
 
-    condition->print_struct(d+1, s);
+    condition->print_struct(d+1, s, type);
     update->print_struct(d+1, s);
-    body->print_struct(d+1, s);
+    body->print_struct(d+1, s, type);
     return s;
 }
 

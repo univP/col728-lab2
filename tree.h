@@ -50,7 +50,7 @@ std::ostream& pad(int d, std::ostream& s);
 // Class definitions
 
 class ast_struct {
-public:
+
 };
 
 class ast_program : public ast_struct {
@@ -217,7 +217,7 @@ public:
     ast_block_item(ast_declaration* declaration);
     ast_block_item(ast_statement* statement);
     int get_index();
-    std::ostream& print_struct(int d, std::ostream& s);
+    std::ostream& print_struct(int d, std::ostream& s, Symbol type);
     void CodeGen();
 };
 
@@ -348,7 +348,7 @@ public:
 class ast_statement : public ast_struct {
 public:
     virtual void CodeGen() = 0;
-    virtual std::ostream& print_struct(int d, std::ostream& s) = 0;
+    virtual std::ostream& print_struct(int d, std::ostream& s, Symbol type) = 0;
 };
 
 class ast_mif_statement : public ast_statement{
@@ -361,7 +361,7 @@ public:
         ast_statement* else_statement) : condition(condition), 
             then_statement(then_statement), else_statement(else_statement) {}
     void CodeGen();
-    std::ostream& print_struct(int d, std::ostream& s);
+    std::ostream& print_struct(int d, std::ostream& s, Symbol type);
 };
 
 class ast_uif_statement : public ast_statement{
@@ -373,7 +373,7 @@ public:
          : condition(condition), 
             then_statement(then_statement) {}
     void CodeGen();
-    std::ostream& print_struct(int d, std::ostream& s);    
+    std::ostream& print_struct(int d, std::ostream& s, Symbol type);    
 };
 
 class ast_compound_statement : public ast_statement {
@@ -382,7 +382,7 @@ private:
     ast_block_item_list* block_items;
 public:
     ast_compound_statement(ast_block_item_list* block_items);
-    std::ostream& print_struct(int d, std::ostream& s);
+    std::ostream& print_struct(int d, std::ostream& s, Symbol type);
     void CodeGen();
 };
 
@@ -391,7 +391,7 @@ private:
     ast_expression* expression;
 public:
     ast_expression_statement(ast_expression* expression);
-    std::ostream& print_struct(int d, std::ostream& s);
+    std::ostream& print_struct(int d, std::ostream& s, Symbol type);
     void CodeGen();
     ast_expression* get_expression() { return expression; }
 };
@@ -437,7 +437,7 @@ private:
 public:
     ast_jump_statement(): expression(new ast_no_expression()) {}
     ast_jump_statement(ast_expression* expression): expression(expression) {}
-    std::ostream& print_struct(int d, std::ostream& s);
+    std::ostream& print_struct(int d, std::ostream& s, Symbol type);
     void CodeGen();
 };
 
@@ -484,7 +484,7 @@ public:
             data.declaration = declaration;
     }
 
-    std::ostream& print_struct(int d, std::ostream& s);
+    std::ostream& print_struct(int d, std::ostream& s, Symbol type);
     void CodeGen();
 };
 

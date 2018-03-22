@@ -14,22 +14,6 @@
 
 	.external_declaration
 		.function_definition
-			void
-			.declarator
-				.direct_declarator
-					.function_declarator
-						method
-						.parameter_type_list
-			.compound_statement
-				.block_item
-					.expression_statement
-						.post_expression
-							printf
-							Hello World
-: char*
-
-	.external_declaration
-		.function_definition
 			int
 			.declarator
 				.direct_declarator
@@ -40,7 +24,9 @@
 				.block_item
 					.expression_statement
 						.post_expression
-							method
+							printf
+							Hello World
+: char*
 				.block_item
 					.jump_statement
 						0: int

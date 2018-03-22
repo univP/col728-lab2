@@ -13,20 +13,12 @@
 									format
 
 	.external_declaration
-		.function_definition
-			void
-			.declarator
-				.direct_declarator
-					.function_declarator
-						method
-						.parameter_type_list
-			.compound_statement
-				.block_item
-					.expression_statement
-						.post_expression
-							printf
-							Hello World
-: char*
+		.declaration
+			char
+			.init_declarator
+				.declarator
+					.direct_declarator
+						x
 
 	.external_declaration
 		.function_definition
@@ -39,8 +31,28 @@
 			.compound_statement
 				.block_item
 					.expression_statement
+						.assign_expression
+							x
+							5: int
+				.block_item
+					.declaration
+						int
+						.init_declarator
+							.declarator
+								.direct_declarator
+									x
+				.block_item
+					.expression_statement
+						.assign_expression
+							x
+							'c': int
+				.block_item
+					.expression_statement
 						.post_expression
-							method
+							printf
+							x: %c
+: string
+							x: int
 				.block_item
 					.jump_statement
 						0: int
