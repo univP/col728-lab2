@@ -18,10 +18,10 @@ static void usage()
 #include "parser.h"
 extern "C" ast_program* program;
 
-StrTable id_table;
-StrTable str_table;
-StrTable int_table;
-StrTable float_table;
+StrTable id_table;      // Contains identifiers
+StrTable str_table;     // Contains string literals
+StrTable int_table;     // Contains integer constants
+StrTable float_table;   //  Contains floating point literals
 
 Symbol
     Void = id_table.add_string("void"),
@@ -29,9 +29,10 @@ Symbol
     Float = id_table.add_string("float"),
     Char = id_table.add_string("char"),
     Str = id_table.add_string("string"),
-    Undefined = id_table.add_string(".undefined"),
-    No_type = id_table.add_string(".no_type");
+    Undefined = id_table.add_string(".undefined"),  // Type uninitialized
+    No_type = id_table.add_string(".no_type");      // No expression type
 
+// Used for type checking
 struct MethodType {
     Symbol return_type;
     std::vector<Symbol> param_types;
@@ -62,6 +63,7 @@ main(int argc, char **argv)
     int retv = yyparse();
     // printf("retv = %d\n", ret);
 
+    // Contains syntax errors.
     if (retv) {
         std::cerr << "Compilation halted due to lexer/parser errors." 
             << std::endl;
@@ -75,6 +77,11 @@ main(int argc, char **argv)
     semant_stream.close();
 
     if (errors.size() != 0) {
+
+        for (std::string error : errors) {
+            std::cerr << error << std::endl;
+        }
+
         std::cerr << "Compilation halted due to semantic errors." 
             << std::endl;
         exit(0);
@@ -195,7 +202,6 @@ llvm::Value* ast_identifier_expression::CodeGen() {
     llvm::Value* value = named_values.lookup(identifier);
 
     if (value == NULL) {
-        errors.push_back("Variable not in scope.");
         return nullptr;
     } else {
         set_type(named_types.lookup(identifier));
@@ -650,7 +656,6 @@ llvm::Value* ast_assign_expression::CodeGen(){
     
     llvm::Value* v_address = named_values.lookup(identifier);
     if(!v_address) {
-        errors.push_back("Variable not in scope.");
         return nullptr;
     } else {
         builder.CreateStore(e_val, v_address);
@@ -773,7 +778,7 @@ std::ostream& ast_identifier_expression::print_struct(int d, std::ostream& s) {
     Symbol type = variable_table.lookup(identifier);
 
     if (type == NULL) {
-        errors.push_back("Identifier " + *identifier + " not in scope.");
+        errors.push_back(*identifier + " used in expression and undeclared.");
     } else {
         set_type(type);
     }
@@ -830,7 +835,7 @@ std::ostream& ast_identifier_declarator::print_struct(int d, std::ostream& s,
     pad(d, s) << *identifier << std::endl;
 
     if (variable_table.probe(identifier)) {
-        errors.push_back("Redeclaration of variable.");
+        errors.push_back("Redeclaration of variable " + *identifier);
     } else {
         variable_table.insert(identifier, type);
     }
@@ -856,7 +861,7 @@ std::ostream& ast_function_declarator::print_struct(int d, std::ostream& s,
     method_type->variadic = parameter_types->is_variadic();
     
     if (method_table.probe(identifier)) {
-        errors.push_back("Redeclaration of method.");
+        errors.push_back("Redeclaration of method " + *identifier);
     } else {
         method_table.insert(identifier, method_type);
     }
@@ -870,7 +875,7 @@ std::ostream& ast_parameter_declaration::print_struct(int d, std::ostream& s) {
     pad(d+1,s) << *identifier << std::endl;
     
     if (variable_table.probe(identifier)) {
-        errors.push_back("Redeclaration of formal argument.");
+        errors.push_back("Redeclaration of formal argument " + *identifier);
     } else {
         variable_table.insert(identifier,
             type_specifier->get_type_specifier());
@@ -946,11 +951,11 @@ std::ostream& ast_postfix_expression::print_struct(int d, std::ostream& s) {
     MethodType* method_type = method_table.lookup(function_name);
     
     if (!method_type) {
-        errors.push_back("Method not in scope.");
+        errors.push_back("Undeclared method " + *function_name + " called.");
         return s;
     } else if (!method_type->variadic && 
         (method_type->param_types).size() != arguments->size()) {
-            errors.push_back("Incorrect number of arguments");
+            errors.push_back("Incorrect number of arguments passed.");
             return s;
     }
 
@@ -1091,9 +1096,10 @@ std::ostream& ast_assign_expression::print_struct(int d, std::ostream& s) {
     Symbol type = variable_table.lookup(identifier);
 
     if (!type) {
-        errors.push_back("Identifier not in scope.");
+        errors.push_back("Assigned to undeclared variable " + *identifier);
     } else if (type != expression->get_type()) {
-        errors.push_back("Invalid type of arguments.");
+        errors.push_back("In assignment expected: " + *type + " ,got: " 
+            + *expression->get_type());
     } else {
         set_type(type);
     }
