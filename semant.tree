@@ -13,12 +13,132 @@
 									format
 
 	.external_declaration
-		.declaration
-			char
-			.init_declarator
-				.declarator
-					.direct_declarator
-						x
+		.function_definition
+			int
+			.declarator
+				.direct_declarator
+					.function_declarator
+						fib_rec
+						.parameter_type_list
+							.parameter_declaration
+								int
+								n
+			.compound_statement
+				.block_item
+					.uid_statement
+						.equality_expression
+							n: int
+							0: int
+						.compound_statement
+							.block_item
+								.jump_statement
+									1: int
+				.block_item
+					.uid_statement
+						.equality_expression
+							n: int
+							1: int
+						.compound_statement
+							.block_item
+								.jump_statement
+									1: int
+				.block_item
+					.jump_statement
+						.add_expression
+							.post_expression
+								fib_rec
+								.sub_expression
+									n: int
+									1: int
+							.post_expression
+								fib_rec
+								.sub_expression
+									n: int
+									2: int
+
+	.external_declaration
+		.function_definition
+			int
+			.declarator
+				.direct_declarator
+					.function_declarator
+						fib_iter
+						.parameter_type_list
+							.parameter_declaration
+								int
+								n
+			.compound_statement
+				.block_item
+					.declaration
+						int
+						.init_declarator
+							.declarator
+								.direct_declarator
+									a
+						.init_declarator
+							.declarator
+								.direct_declarator
+									b
+				.block_item
+					.expression_statement
+						.assign_expression
+							a
+							1: int
+				.block_item
+					.expression_statement
+						.assign_expression
+							b
+							1: int
+				.block_item
+					.declaration
+						int
+						.init_declarator
+							.declarator
+								.direct_declarator
+									i
+				.block_item
+					.for_statement
+						.expression_statement
+							.assign_expression
+								i
+								1: int
+						.expression_statement
+							.less_expression
+								i: int
+								n: int
+						.assign_expression
+							i
+							.add_expression
+								i: int
+								1: int
+						.compound_statement
+							.block_item
+								.declaration
+									int
+									.init_declarator
+										.declarator
+											.direct_declarator
+												c
+							.block_item
+								.expression_statement
+									.assign_expression
+										c
+										.add_expression
+											a: int
+											b: int
+							.block_item
+								.expression_statement
+									.assign_expression
+										a
+										b: int
+							.block_item
+								.expression_statement
+									.assign_expression
+										b
+										c: int
+				.block_item
+					.jump_statement
+						b: int
 
 	.external_declaration
 		.function_definition
@@ -31,28 +151,58 @@
 			.compound_statement
 				.block_item
 					.expression_statement
-						.assign_expression
-							x
-							5: int
-				.block_item
-					.declaration
-						int
-						.init_declarator
-							.declarator
-								.direct_declarator
-									x
-				.block_item
-					.expression_statement
-						.assign_expression
-							x
-							'c': int
+						.post_expression
+							printf
+							Fib Rec: %d
+: string
+							.post_expression
+								fib_rec
+								0: int
 				.block_item
 					.expression_statement
 						.post_expression
 							printf
-							x: %c
+							Fib Iter: %d
 : string
-							x: int
+							.post_expression
+								fib_iter
+								0: int
+				.block_item
+					.expression_statement
+						.post_expression
+							printf
+							Fib Rec: %d
+: string
+							.post_expression
+								fib_rec
+								1: int
+				.block_item
+					.expression_statement
+						.post_expression
+							printf
+							Fib Iter: %d
+: string
+							.post_expression
+								fib_iter
+								1: int
+				.block_item
+					.expression_statement
+						.post_expression
+							printf
+							Fib Rec: %d
+: string
+							.post_expression
+								fib_rec
+								6: int
+				.block_item
+					.expression_statement
+						.post_expression
+							printf
+							Fib Iter: %d
+: string
+							.post_expression
+								fib_iter
+								6: int
 				.block_item
 					.jump_statement
 						0: int

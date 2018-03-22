@@ -13,6 +13,8 @@ class ast_i_constant;
 class ast_f_constant;
 class ast_unary_expression;
 class ast_mul_expression;
+class ast_div_expression;
+class ast_mod_expression;
 class ast_add_expression;
 class ast_sub_expression;
 class ast_less_expression;
@@ -138,6 +140,26 @@ private:
     ast_expression *e1, *e2;
 public:
     ast_mul_expression(ast_expression* e1, ast_expression* e2)
+        : e1(e1), e2(e2) {}
+    std::ostream& print_struct(int d, std::ostream& s);
+    llvm::Value* CodeGen();
+};
+
+class ast_div_expression : public ast_expression {
+private:
+    ast_expression *e1, *e2;
+public:
+    ast_div_expression(ast_expression* e1, ast_expression* e2)
+        : e1(e1), e2(e2) {}
+    std::ostream& print_struct(int d, std::ostream& s);
+    llvm::Value* CodeGen();
+};
+
+class ast_mod_expression : public ast_expression {
+private:
+    ast_expression *e1, *e2;
+public:
+    ast_mod_expression(ast_expression* e1, ast_expression* e2)
         : e1(e1), e2(e2) {}
     std::ostream& print_struct(int d, std::ostream& s);
     llvm::Value* CodeGen();

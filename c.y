@@ -133,6 +133,10 @@ multiplicative_expression
 	{ $$ = $1; }
 	| multiplicative_expression '*' unary_expression
 	{ $$ = new ast_mul_expression($1, $3); }
+	| multiplicative_expression '/' unary_expression
+	{ $$ = new ast_div_expression($1, $3); }
+	| multiplicative_expression '%' unary_expression
+	{ $$ = new ast_mod_expression($1, $3); }
 	;
 
 additive_expression

@@ -148,6 +148,84 @@ main(int argc, char **argv)
 |   Section 2 : Code generation |
 `------------------------------*/
 
+unsigned int get_alignment(llvm::Type* type) {
+    if (type->isIntegerTy(32)) {
+        return 4;
+    } else if (type->isFloatTy()) {
+        return 4;
+    } else if (type->isPointerTy() && (
+        type->getPointerElementType())->isIntegerTy(8)) {
+            return 8;
+    }
+
+    type->dump();
+    my_assert(0, __LINE__, __FILE__);
+    return 0;
+}
+
+llvm::Type* get_llvm_type(Symbol type_specifier, bool pointer) {
+    if (pointer) {
+        if (type_specifier == Int) {
+            return llvm::Type::getInt32PtrTy(llvm_context);
+        } else if (type_specifier == Float) {
+            return llvm::Type::getFloatPtrTy(llvm_context);
+        } else if (type_specifier == Void) {
+            return llvm::Type::getInt8PtrTy(llvm_context);
+        } else if (type_specifier == Char) {
+            return llvm::Type::getInt8PtrTy(llvm_context);
+        }
+    } else {
+        if (type_specifier == Int) {
+            return llvm::Type::getInt32Ty(llvm_context);
+        } else if (type_specifier == Float) {
+            return llvm::Type::getFloatTy(llvm_context);
+        } else if (type_specifier == Void) {
+            return llvm::Type::getVoidTy(llvm_context);
+        } else if (type_specifier == Str) {
+            return llvm::Type::getInt8PtrTy(llvm_context);
+        } else if (type_specifier == Char) {
+            return llvm::Type::getInt32Ty(llvm_context);
+        }
+    }
+
+    my_assert(0, __LINE__, __FILE__);
+    return NULL;
+}
+
+llvm::Constant* get_default_value(llvm::Type* type) {
+    if (type->isIntegerTy(32)) {
+        return llvm::ConstantInt::get(llvm_context, 
+            llvm::APInt(32, 0, true));
+    } else if (type->isFloatTy()) {
+        return llvm::ConstantFP::get(llvm_context, 
+            llvm::APFloat(0.0f));
+    } else if (type->isPointerTy() && (
+        type->getPointerElementType())->isIntegerTy(8)) {
+            llvm::StringRef string_ref("");
+            return llvm::ConstantDataArray::getString(llvm_context,
+                string_ref);
+    }
+
+    my_assert(0, __LINE__, __FILE__);
+    return NULL;
+}
+
+Symbol get_symbol_type(llvm::Type* type) {
+    if (type->isIntegerTy(32)) {
+        return Int;
+    } else if (type->isFloatTy()) {
+        return Float;
+    } else if (type->isVoidTy()) {
+        return Void;
+    } else if (type->isPointerTy() && (
+        type->getPointerElementType())->isIntegerTy(8)) {
+            return Str;
+    }
+
+    my_assert(0, __LINE__, __FILE__);
+    return NULL;
+}
+
 llvm::Function* get_function(llvm::Type* type, Symbol function_name) {
     llvm::Function* function = module->getFunction(*function_name);
 
@@ -207,7 +285,8 @@ llvm::Value* ast_identifier_expression::CodeGen() {
         set_type(named_types.lookup(identifier));
     }
     
-    return builder.CreateLoad(value, identifier->c_str());
+    return builder.CreateAlignedLoad(value, ::get_alignment(::get_llvm_type(
+        get_type(), false)), identifier->c_str());
 }
 
 llvm::Value* ast_i_constant::CodeGen() {
@@ -253,7 +332,7 @@ llvm::Value* ast_i_constant::CodeGen() {
 }
 
 llvm::Value* ast_f_constant::CodeGen() {
-    double val = atof(f_constant->c_str());
+    float val = atof(f_constant->c_str());
     set_type(Float);
     return llvm::ConstantFP::get(llvm_context, llvm::APFloat(val));
 }
@@ -283,83 +362,6 @@ llvm::Value* ast_no_expression::CodeGen() {
 
 Symbol ast_type_specifier::get_type_specifier() {
     return type_specifier;
-}
-
-llvm::Type* get_llvm_type(Symbol type_specifier, bool pointer) {
-    if (pointer) {
-        if (type_specifier == Int) {
-            return llvm::Type::getInt32PtrTy(llvm_context);
-        } else if (type_specifier == Float) {
-            return llvm::Type::getFloatPtrTy(llvm_context);
-        } else if (type_specifier == Void) {
-            return llvm::Type::getInt8PtrTy(llvm_context);
-        } else if (type_specifier == Char) {
-            return llvm::Type::getInt8PtrTy(llvm_context);
-        }
-    } else {
-        if (type_specifier == Int) {
-            return llvm::Type::getInt32Ty(llvm_context);
-        } else if (type_specifier == Float) {
-            return llvm::Type::getFloatTy(llvm_context);
-        } else if (type_specifier == Void) {
-            return llvm::Type::getVoidTy(llvm_context);
-        } else if (type_specifier == Str) {
-            return llvm::Type::getInt8PtrTy(llvm_context);
-        } else if (type_specifier == Char) {
-            return llvm::Type::getInt32Ty(llvm_context);
-        }
-    }
-
-    my_assert(0, __LINE__, __FILE__);
-    return NULL;
-}
-
-llvm::Constant* get_default_value(llvm::Type* type) {
-    if (type->isIntegerTy(32)) {
-        return llvm::ConstantInt::get(llvm_context, 
-            llvm::APInt(32, 0, true));
-    } else if (type->isFloatTy()) {
-        return llvm::ConstantFP::get(llvm_context, 
-            llvm::APFloat(0.));
-    } else if (type->isPointerTy() && (
-        type->getPointerElementType())->isIntegerTy(8)) {
-            llvm::StringRef string_ref("");
-            return llvm::ConstantDataArray::getString(llvm_context,
-                string_ref);
-    }
-
-    my_assert(0, __LINE__, __FILE__);
-    return NULL;
-}
-
-Symbol get_symbol_type(llvm::Type* type) {
-    if (type->isIntegerTy(32)) {
-        return Int;
-    } else if (type->isFloatTy()) {
-        return Float;
-    } else if (type->isVoidTy()) {
-        return Void;
-    } else if (type->isPointerTy() && (
-        type->getPointerElementType())->isIntegerTy(8)) {
-            return Str;
-    }
-
-    my_assert(0, __LINE__, __FILE__);
-    return NULL;
-}
-
-unsigned get_alignment(llvm::Type* type) {
-    if (type->isIntegerTy(32)) {
-        return 4;
-    } else if (type->isFloatTy()) {
-        return 4;
-    } else if (type->isPointerTy() && (
-        type->getPointerElementType())->isIntegerTy(8)) {
-            return 8;
-    }
-
-    my_assert(0, __LINE__, __FILE__);
-    return 0;
 }
 
 void ast_declaration::CodeGenGlobal() {
@@ -435,7 +437,8 @@ void ast_identifier_declarator::CodeGenLocal(llvm::Type* type) {
     alloca->setAlignment(::get_alignment(type));
     named_values.insert(identifier,alloca);
     named_types.insert(identifier, ::get_symbol_type(type));
-    builder.CreateStore(get_default_value(type), alloca);    
+    builder.CreateAlignedStore(::get_default_value(type), alloca,
+        ::get_alignment(type));
 }
 
 void ast_compound_statement::CodeGen() {
@@ -499,7 +502,7 @@ llvm::Function* ast_function_definition::CodeGen() {
         llvm::AllocaInst* alloca = ::CreateEntryBlockAlloca(type, function, 
             id_table.add_string(farg.getName()));
         alloca->setAlignment(::get_alignment(type));
-        builder.CreateStore(&farg, alloca);
+        builder.CreateAlignedStore(&farg, alloca, ::get_alignment(type));
         named_values.insert(id_table.add_string(farg.getName()),
             alloca);
         named_types.insert(id_table.add_string(farg.getName()),
@@ -574,10 +577,42 @@ llvm::Value* ast_mul_expression::CodeGen(){
     if (e1->get_type() == Int && e2->get_type() == Int){
         set_type(Int);
         return builder.CreateMul(e1_eval, e2_eval, "multmp");
-    }else {
+    } else if (e1->get_type() == Float && e2->get_type() == Float) {
         set_type(Float);
         return builder.CreateFMul(e1_eval, e2_eval, "multmp");
     }
+
+    return nullptr;
+}
+
+llvm::Value* ast_div_expression::CodeGen(){
+    llvm::Value* e1_eval = e1->CodeGen();
+    llvm::Value* e2_eval = e2->CodeGen();
+
+    if (e1->get_type() == Int && e2->get_type() == Int){
+        set_type(Int);
+        return builder.CreateSDiv(e1_eval, e2_eval, "divtmp");
+    } else if (e1->get_type() == Float && e2->get_type() == Float) {
+        set_type(Float);
+        return builder.CreateFDiv(e1_eval, e2_eval, "divtmp");
+    }
+
+    return nullptr;
+}
+
+llvm::Value* ast_mod_expression::CodeGen(){
+    llvm::Value* e1_eval = e1->CodeGen();
+    llvm::Value* e2_eval = e2->CodeGen();
+
+    if (e1->get_type() == Int && e2->get_type() == Int){
+        set_type(Int);
+        return builder.CreateSRem(e1_eval, e2_eval, "modtmp");
+    } else if (e1->get_type() == Float && e2->get_type() == Float) {
+        set_type(Float);
+        return builder.CreateFRem(e1_eval, e2_eval, "modtmp");
+    }
+
+    return nullptr;
 }
 
 llvm::Value* ast_add_expression::CodeGen(){
@@ -587,10 +622,12 @@ llvm::Value* ast_add_expression::CodeGen(){
     if (e1->get_type() == Int && e2->get_type() == Int){
         set_type(Int);
         return builder.CreateAdd(e1_eval, e2_eval, "addtmp");
-    }else {
+    }else if (e1->get_type() == Float && e2->get_type() == Float) {
         set_type(Float);
         return builder.CreateFAdd(e1_eval, e2_eval, "addtmp");
     }
+
+    return nullptr;
 }
 
 
@@ -601,10 +638,12 @@ llvm::Value* ast_sub_expression::CodeGen(){
     if (e1->get_type() == Int && e2->get_type() == Int){
         set_type(Int);
         return builder.CreateSub(e1_eval, e2_eval, "subtmp");
-    }else {
+    }else if (e1->get_type() == Float && e2->get_type() == Float) {
         set_type(Float);
         return builder.CreateFSub(e1_eval, e2_eval, "subtmp");
     }
+
+    return nullptr;
 }
 
 
@@ -615,10 +654,12 @@ llvm::Value* ast_less_expression::CodeGen(){
     if (e1->get_type() == Int && e2->get_type() == Int){
         set_type(Int);
         return builder.CreateICmpSLT(e1_eval, e2_eval, "lesstmp");
-    }else {
+    }else if (e1->get_type() == Float && e2->get_type() == Float) {
         set_type(Float);
         return builder.CreateFCmpOLT(e1_eval, e2_eval, "lesstmp");
     }
+
+    return nullptr;
 }
 
 llvm::Value* ast_leq_expression::CodeGen(){
@@ -628,10 +669,12 @@ llvm::Value* ast_leq_expression::CodeGen(){
     if (e1->get_type() == Int && e2->get_type() == Int){
         set_type(Int);
         return builder.CreateICmpSLE(e1_eval, e2_eval, "leqtmp");
-    }else {
+    }else if (e1->get_type() == Float && e2->get_type() == Float) {
         set_type(Float);
         return builder.CreateFCmpOLE(e1_eval, e2_eval, "leqtmp");
     }
+
+    return nullptr;
 }
 
 
@@ -642,10 +685,12 @@ llvm::Value* ast_eq_expression::CodeGen(){
     if (e1->get_type() == Int && e2->get_type() == Int){
         set_type(Int);
         return builder.CreateICmpEQ(e1_eval, e2_eval, "eqtmp");
-    }else {
+    }else if (e1->get_type() == Float && e2->get_type() == Float) {
         set_type(Float);
         return builder.CreateFCmpOEQ(e1_eval, e2_eval, "eqtmp");
     }
+
+    return nullptr;
 }
 
 llvm::Value* ast_assign_expression::CodeGen(){
@@ -658,8 +703,9 @@ llvm::Value* ast_assign_expression::CodeGen(){
     if(!v_address) {
         return nullptr;
     } else {
-        builder.CreateStore(e_val, v_address);
         set_type(named_types.lookup(identifier));
+        builder.CreateAlignedStore(e_val, v_address, 
+            ::get_alignment(::get_llvm_type(get_type(), false)));
     }
 
     return e_val;  
@@ -1025,6 +1071,38 @@ std::ostream& ast_sub_expression::print_struct(int d, std::ostream& s) {
 
 std::ostream& ast_mul_expression::print_struct(int d, std::ostream& s) {
     pad(d, s) << ".multiply_expression" << std::endl;
+    e1->print_struct(d+1, s);  
+    e2->print_struct(d+1, s); 
+
+    if (e1->get_type() == Int && e2->get_type() == Int) {
+        set_type(Int);
+    } else if (e1->get_type() == Float && e2->get_type() == Float) {
+        set_type(Float);
+    } else {
+        errors.push_back("Invalid type of arguments.");
+    }
+
+    return s;
+}
+
+std::ostream& ast_div_expression::print_struct(int d, std::ostream& s) {
+    pad(d, s) << ".div_expression" << std::endl;
+    e1->print_struct(d+1, s);  
+    e2->print_struct(d+1, s); 
+
+    if (e1->get_type() == Int && e2->get_type() == Int) {
+        set_type(Int);
+    } else if (e1->get_type() == Float && e2->get_type() == Float) {
+        set_type(Float);
+    } else {
+        errors.push_back("Invalid type of arguments.");
+    }
+
+    return s;
+}
+
+std::ostream& ast_mod_expression::print_struct(int d, std::ostream& s) {
+    pad(d, s) << ".mod_expression" << std::endl;
     e1->print_struct(d+1, s);  
     e2->print_struct(d+1, s); 
 
