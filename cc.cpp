@@ -151,8 +151,8 @@ main(int argc, char **argv)
 unsigned int get_alignment(llvm::Type* type) {
     if (type->isIntegerTy(32)) {
         return 4;
-    } else if (type->isFloatTy()) {
-        return 4;
+    } else if (type->isDoubleTy()) {
+        return 8;
     } else if (type->isPointerTy() && (
         type->getPointerElementType())->isIntegerTy(8)) {
             return 8;
@@ -168,7 +168,7 @@ llvm::Type* get_llvm_type(Symbol type_specifier, bool pointer) {
         if (type_specifier == Int) {
             return llvm::Type::getInt32PtrTy(llvm_context);
         } else if (type_specifier == Float) {
-            return llvm::Type::getFloatPtrTy(llvm_context);
+            return llvm::Type::getDoublePtrTy(llvm_context);
         } else if (type_specifier == Void) {
             return llvm::Type::getInt8PtrTy(llvm_context);
         } else if (type_specifier == Char) {
@@ -178,7 +178,7 @@ llvm::Type* get_llvm_type(Symbol type_specifier, bool pointer) {
         if (type_specifier == Int) {
             return llvm::Type::getInt32Ty(llvm_context);
         } else if (type_specifier == Float) {
-            return llvm::Type::getFloatTy(llvm_context);
+            return llvm::Type::getDoubleTy(llvm_context);
         } else if (type_specifier == Void) {
             return llvm::Type::getVoidTy(llvm_context);
         } else if (type_specifier == Str) {
@@ -196,9 +196,9 @@ llvm::Constant* get_default_value(llvm::Type* type) {
     if (type->isIntegerTy(32)) {
         return llvm::ConstantInt::get(llvm_context, 
             llvm::APInt(32, 0, true));
-    } else if (type->isFloatTy()) {
+    } else if (type->isDoubleTy()) {
         return llvm::ConstantFP::get(llvm_context, 
-            llvm::APFloat(0.0f));
+            llvm::APFloat(0.0));
     } else if (type->isPointerTy() && (
         type->getPointerElementType())->isIntegerTy(8)) {
             llvm::StringRef string_ref("");
@@ -213,7 +213,7 @@ llvm::Constant* get_default_value(llvm::Type* type) {
 Symbol get_symbol_type(llvm::Type* type) {
     if (type->isIntegerTy(32)) {
         return Int;
-    } else if (type->isFloatTy()) {
+    } else if (type->isDoubleTy()) {
         return Float;
     } else if (type->isVoidTy()) {
         return Void;
@@ -332,7 +332,7 @@ llvm::Value* ast_i_constant::CodeGen() {
 }
 
 llvm::Value* ast_f_constant::CodeGen() {
-    float val = atof(f_constant->c_str());
+    double val = atof(f_constant->c_str());
     set_type(Float);
     return llvm::ConstantFP::get(llvm_context, llvm::APFloat(val));
 }
@@ -1276,12 +1276,12 @@ ast_identifier_expression::ast_identifier_expression(Symbol identifier)
 
 ast_i_constant::ast_i_constant(Symbol i_constant)
     : i_constant(i_constant) {
-        set_type(Int);
+        set_type(Undefined);
 }
 
 ast_f_constant::ast_f_constant(Symbol f_constant)
     : f_constant(f_constant) {
-        set_type(Float);
+        set_type(Undefined);
 }
 
 ast_declaration::ast_declaration(ast_type_specifier* type_specifier,

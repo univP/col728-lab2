@@ -1,39 +1,15 @@
 int printf(char* format, ...);
 
-int fib_rec(int n) {
-    if (n == 0) {
-        return 1;
-    }
-
-    if (n == 1) {
-        return 1;
-    }
-
-    return fib_rec(n-1) + fib_rec(n-2);
-}
-
-int fib_iter(int n) {
-    int a,b;
-    a = 1;
-    b = 1;
-    int i;
-
-    for (i = 1; i < n; i = i + 1) {
-        int c;
-        c = a+b;
-        a = b;
-        b = c;
-    }
-
-    return b;
-}
-
 int main() {
-    printf("Fib Rec: %d\n", fib_rec(0));
-    printf("Fib Iter: %d\n", fib_iter(0));
-    printf("Fib Rec: %d\n", fib_rec(1));
-    printf("Fib Iter: %d\n", fib_iter(1));
-    printf("Fib Rec: %d\n", fib_rec(6));
-    printf("Fib Iter: %d\n", fib_iter(6));
+    int x, y;
+    x = 10;
+    y = 5;
+    printf("x + y = %d, x - y = %d, x * y = %d, x / y = %d, x % y = %d\n",
+        x+y, x-y, x*y, x/y, x%y);
+    float m, n;
+    m = 8.0;
+    n = 5.0;
+    printf("m + n = %f, m - n = %f, m * n = %f, m / n = %f\n",
+        13.0, m-n, m*n, m/n);
     return 0;
 }
