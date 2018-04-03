@@ -11,6 +11,8 @@
 #include <sstream>
 #include <fstream>
 #include <algorithm>
+#include <utility>
+#include <memory>
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
@@ -32,6 +34,8 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/GVN.h"
 
 #define my_assert(e,l,f) if (!(e)) { std::cerr << "Line: "<< l << ", File: " << f << std::endl; exit(1); }
 

@@ -48,6 +48,7 @@ std::map<Symbol, ast_function_declarator*> fun_decls;
 SymTable<Symbol, std::string> variable_table;
 SymTable<Symbol, MethodType> method_table;
 std::vector<std::string> errors;
+std::unique_ptr<llvm::legacy::FunctionPassManager> fpm;
 
 // Majorly implements the last two phases namely
 //  semantic analysis and code generation.
@@ -282,14 +283,35 @@ llvm::AllocaInst* CreateEntryBlockAlloca(llvm::Type* type,
     return local_builder.CreateAlloca(type, nullptr, *local_var);
 }
 
+void InitializeModuleAndPassManager() {
+  // Open a new module.
+    module = llvm::make_unique<llvm::Module>("col728 lab2",
+            llvm_context);
+
+    // Create a new pass manager attached to it.
+    fpm = llvm::make_unique<llvm::legacy::FunctionPassManager>(module.get());
+
+    // Promote allocas to registers.
+    fpm->add(llvm::createPromoteMemoryToRegisterPass());
+    // Do simple "peephole" optimizations and bit-twiddling optzns.
+    fpm->add(llvm::createInstructionCombiningPass());
+    // Reassociate expressions.
+    fpm->add(llvm::createReassociatePass());
+    // Eliminate Common SubExpressions.
+    fpm->add(llvm::createGVNPass());
+    // Simplify the control flow graph (deleting unreachable blocks, etc).
+    fpm->add(llvm::createCFGSimplificationPass());
+
+    fpm->doInitialization();
+}
+
 // Code generation function defined in appropriate AST nodes.
 // Named values contain the location of the the variable allocated
 //  and Named types contains the type of the variable.
 void ast_program::CodeGen() {
     named_values.enter_scope();
     named_types.enter_scope();
-    module = llvm::make_unique<llvm::Module>("col728 lab2",
-        llvm_context);
+    InitializeModuleAndPassManager();
 
     for (ListI lit = external_declarations->begin(); 
             lit != external_declarations->end(); lit++) {
@@ -569,6 +591,7 @@ llvm::Function* ast_function_definition::CodeGen() {
     }
 
     llvm::verifyFunction(*function);
+    fpm->run(*function);
 
     named_values.exit_scope();
     named_types.exit_scope();

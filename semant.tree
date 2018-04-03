@@ -1,0 +1,62 @@
+.program
+	.external_declaration
+		.declaration
+			int
+			.init_declarator
+				.declarator
+					.direct_declarator
+						.function_declarator
+							printf
+							.parameter_type_list
+								.parameter_declaration
+									char
+									format
+
+	.external_declaration
+		.function_definition
+			int
+			.declarator
+				.direct_declarator
+					.function_declarator
+						compute
+						.parameter_type_list
+							.parameter_declaration
+								int
+								x
+			.compound_statement
+				.block_item
+					.jump_statement
+						.multiply_expression
+							.add_expression
+								.add_expression
+									1: int
+									2: int
+								x: int
+							.add_expression
+								x: int
+								.add_expression
+									1: int
+									2: int
+
+	.external_declaration
+		.function_definition
+			int
+			.declarator
+				.direct_declarator
+					.function_declarator
+						main
+						.parameter_type_list
+			.compound_statement
+				.block_item
+					.expression_statement
+						.post_expression
+							printf
+							%d
+: string
+							.post_expression
+								compute
+								5: int
+				.block_item
+					.jump_statement
+						0: int
+
