@@ -1,21 +1,10 @@
 int printf(char* format, ...);
 
-int recse(int x) {
-    return (1 + 2 + x)*(x + (1 + 2));
-}
-
-int dce(int x) {
-    if (0) {
-        return 0;
-    }
-
-    int y;
-    y = 5;
-    return x;
-}
-
 int main() {
-    printf("recse(5): %d\n", recse(5));
-    printf("dce(10): %d\n", dce(10));
+    int y;
+    y = !54;
+    y = ~10;
+    y = -4;
+    y = (2*4)%5;
     return 0;
 }

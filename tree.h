@@ -65,6 +65,7 @@ public:
     ast_program(ast_external_declaration_list* external_declarations);
     std::ostream& print_struct(int d, std::ostream& s);
     void CodeGen();
+    void local_opt();
 };
 
 class ast_expression : public ast_struct {
@@ -75,6 +76,8 @@ public:
     void set_type(Symbol type);
     virtual llvm::Value* CodeGen() = 0;
     virtual std::ostream& print_struct(int d, std::ostream& s) = 0;
+    virtual ast_expression* const_fold() = 0;
+    virtual Symbol get_const() = 0;
 };
 
 class ast_identifier_expression : public ast_expression {
@@ -84,6 +87,8 @@ public:
     ast_identifier_expression(Symbol identifier);
     std::ostream& print_struct(int d, std::ostream& s);
     llvm::Value* CodeGen();
+    ast_expression* const_fold();
+    Symbol get_const() { return NULL; }
 };
 
 class ast_i_constant : public ast_expression {
@@ -93,6 +98,8 @@ public:
     ast_i_constant(Symbol i_constant);
     std::ostream& print_struct(int d, std::ostream& s);
     llvm::Value* CodeGen();
+    ast_expression* const_fold();
+    Symbol get_const() { return i_constant; }
 };
 
 class ast_f_constant : public ast_expression {
@@ -102,6 +109,8 @@ public:
     ast_f_constant(Symbol f_constant);
     std::ostream& print_struct(int d, std::ostream& s);
     llvm::Value* CodeGen();
+    ast_expression* const_fold();
+    Symbol get_const() { return f_constant; }
 };
 
 class ast_string_expression : public ast_expression {
@@ -112,6 +121,8 @@ public:
         : string_literal(string_literal) {}
     std::ostream& print_struct(int d, std::ostream& s);
     llvm::Value* CodeGen();
+    ast_expression* const_fold();
+    Symbol get_const() { return NULL; }
 };
 
 class ast_postfix_expression : public ast_expression {
@@ -124,6 +135,8 @@ public:
         function_name(function_name), arguments(arguments) {}
     std::ostream& print_struct(int d, std::ostream& s);
     llvm::Value* CodeGen();
+    ast_expression* const_fold();
+    Symbol get_const() { return NULL; }
 };
 
 class ast_unary_expression : public ast_expression {
@@ -135,6 +148,8 @@ public:
         ast_expression* expression): unary(unary), expression(expression) {}
     std::ostream& print_struct(int d, std::ostream& s);
     llvm::Value* CodeGen();
+    ast_expression* const_fold();
+    Symbol get_const() { return NULL; }
 };
 
 class ast_mul_expression : public ast_expression {
@@ -145,6 +160,8 @@ public:
         : e1(e1), e2(e2) {}
     std::ostream& print_struct(int d, std::ostream& s);
     llvm::Value* CodeGen();
+    ast_expression* const_fold();
+    Symbol get_const() { return NULL; }
 };
 
 class ast_div_expression : public ast_expression {
@@ -155,6 +172,8 @@ public:
         : e1(e1), e2(e2) {}
     std::ostream& print_struct(int d, std::ostream& s);
     llvm::Value* CodeGen();
+    ast_expression* const_fold();
+    Symbol get_const() { return NULL; }
 };
 
 class ast_mod_expression : public ast_expression {
@@ -165,6 +184,8 @@ public:
         : e1(e1), e2(e2) {}
     std::ostream& print_struct(int d, std::ostream& s);
     llvm::Value* CodeGen();
+    ast_expression* const_fold();
+    Symbol get_const() { return NULL; }
 };
 
 class ast_add_expression : public ast_expression {
@@ -175,6 +196,8 @@ public:
         : e1(e1), e2(e2) {}
     std::ostream& print_struct(int d, std::ostream& s);
     llvm::Value* CodeGen();
+    ast_expression* const_fold();
+    Symbol get_const() { return NULL; }
 };
 
 class ast_sub_expression : public ast_expression {
@@ -186,6 +209,8 @@ public:
         : e1(e1), e2(e2) {}
     std::ostream& print_struct(int d, std::ostream& s);
     llvm::Value* CodeGen();
+    ast_expression* const_fold();
+    Symbol get_const() { return NULL; }
 };
 
 class ast_less_expression : public ast_expression {
@@ -196,6 +221,8 @@ public:
         : e1(e1), e2(e2) {}
     std::ostream& print_struct(int d, std::ostream& s);
     llvm::Value* CodeGen();
+    ast_expression* const_fold();
+    Symbol get_const() { return NULL; }
 };
 
 class ast_leq_expression : public ast_expression {
@@ -206,6 +233,8 @@ public:
         : e1(e1), e2(e2) {}
     std::ostream& print_struct(int d, std::ostream& s);
     llvm::Value* CodeGen();
+    ast_expression* const_fold();
+    Symbol get_const() { return NULL; }
 };
 
 class ast_eq_expression : public ast_expression {
@@ -216,6 +245,8 @@ public:
         : e1(e1), e2(e2) {}
     std::ostream& print_struct(int d, std::ostream& s);
     llvm::Value* CodeGen();
+    ast_expression* const_fold();
+    Symbol get_const() { return NULL; }
 };
 
 class ast_assign_expression : public ast_expression {
@@ -228,6 +259,8 @@ public:
         : identifier(identifier), expression(expression) {}
     std::ostream& print_struct(int d, std::ostream& s);
     llvm::Value* CodeGen();
+    ast_expression* const_fold();
+    Symbol get_const() { return NULL; }
 };
 
 class ast_block_item : public ast_struct {
@@ -243,6 +276,7 @@ public:
     int get_index();
     std::ostream& print_struct(int d, std::ostream& s, Symbol type);
     void CodeGen();
+    void local_opt();
 };
 
 class ast_declaration : public ast_struct {
@@ -373,6 +407,7 @@ class ast_statement : public ast_struct {
 public:
     virtual void CodeGen() = 0;
     virtual std::ostream& print_struct(int d, std::ostream& s, Symbol type) = 0;
+    virtual void local_opt() = 0;
 };
 
 class ast_mif_statement : public ast_statement{
@@ -386,6 +421,7 @@ public:
             then_statement(then_statement), else_statement(else_statement) {}
     void CodeGen();
     std::ostream& print_struct(int d, std::ostream& s, Symbol type);
+    void local_opt();
 };
 
 class ast_uif_statement : public ast_statement{
@@ -397,7 +433,8 @@ public:
          : condition(condition), 
             then_statement(then_statement) {}
     void CodeGen();
-    std::ostream& print_struct(int d, std::ostream& s, Symbol type);    
+    std::ostream& print_struct(int d, std::ostream& s, Symbol type);
+    void local_opt();   
 };
 
 class ast_compound_statement : public ast_statement {
@@ -408,6 +445,7 @@ public:
     ast_compound_statement(ast_block_item_list* block_items);
     std::ostream& print_struct(int d, std::ostream& s, Symbol type);
     void CodeGen();
+    void local_opt();
 };
 
 class ast_expression_statement : public ast_statement {
@@ -418,6 +456,7 @@ public:
     std::ostream& print_struct(int d, std::ostream& s, Symbol type);
     void CodeGen();
     ast_expression* get_expression() { return expression; }
+    void local_opt();
 };
 
 class ast_no_expression : public ast_expression {
@@ -425,6 +464,8 @@ public:
     ast_no_expression();
     std::ostream& print_struct(int d, std::ostream& s);
     llvm::Value* CodeGen();
+    ast_expression* const_fold();
+    Symbol get_const() { return NULL; }
 };
 
 class ast_external_declaration : public ast_struct {
@@ -440,6 +481,7 @@ public:
     int get_index();
     void CodeGen();
     std::ostream& print_struct(int d, std::ostream& s);
+    void local_opt();
 };
 
 class ast_function_definition : public ast_struct {
@@ -453,6 +495,7 @@ public:
         ast_compound_statement* compound_statement);
     std::ostream& print_struct(int d, std::ostream& s);
     llvm::Function* CodeGen();
+    void local_opt();
 };
 
 class ast_jump_statement : public ast_statement {
@@ -463,6 +506,7 @@ public:
     ast_jump_statement(ast_expression* expression): expression(expression) {}
     std::ostream& print_struct(int d, std::ostream& s, Symbol type);
     void CodeGen();
+    void local_opt();
 };
 
 class ast_for_statement : public ast_statement {
@@ -510,6 +554,7 @@ public:
 
     std::ostream& print_struct(int d, std::ostream& s, Symbol type);
     void CodeGen();
+    void local_opt();
 };
 
 class ast_parameter_type_list: public ast_struct {

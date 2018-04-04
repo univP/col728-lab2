@@ -49,6 +49,7 @@ SymTable<Symbol, std::string> variable_table;
 SymTable<Symbol, MethodType> method_table;
 std::vector<std::string> errors;
 std::unique_ptr<llvm::legacy::FunctionPassManager> fpm;
+int num_changes;
 
 // Majorly implements the last two phases namely
 //  semantic analysis and code generation.
@@ -98,6 +99,15 @@ main(int argc, char **argv)
             << std::endl;
         exit(0);
     }
+
+    // local optimizations on AST
+    program->local_opt();
+
+    std::ofstream semant_stream1;
+    std::string file1("semant1.tree");
+    semant_stream1.open(file1);
+    program->print_struct(0, semant_stream1);
+    semant_stream1.close();
 
     //  Code Generation phase.
     program->CodeGen();
@@ -155,6 +165,354 @@ main(int argc, char **argv)
     llvm::outs() << "Wrote " << Filename << "\n";
 
     exit(0);
+}
+
+/*----------------------------------.
+|   Section 2: Local Optimization   |
+`----------------------------------*/
+
+void ast_program::local_opt() {
+    for (ListI lit = external_declarations->begin();
+        lit != external_declarations->end(); lit++) {
+            (*lit)->local_opt();
+    }
+}
+
+void ast_external_declaration::local_opt() {
+    if (index == 1) {
+        data.function_definition->local_opt();
+    }
+}
+
+void ast_function_definition::local_opt() {
+    compound_statement->local_opt();
+}
+
+void ast_compound_statement::local_opt() {
+    for (ListI lit = block_items->begin();
+        lit != block_items->end(); lit++) {
+            (*lit)->local_opt();
+    }
+}
+
+void ast_block_item::local_opt() {
+    if (index == 1) {
+        data.statement->local_opt();
+    }
+}
+
+void ast_expression_statement::local_opt() {
+    expression = expression->const_fold();
+}
+
+void ast_mif_statement::local_opt() {
+    condition = condition->const_fold();
+    then_statement->local_opt();
+    else_statement->local_opt();
+}
+
+void ast_uif_statement::local_opt() {
+    condition = condition->const_fold();
+    then_statement->local_opt();
+}
+
+void ast_for_statement::local_opt() {
+    if (index == 0) {
+        data.expression_statement->local_opt();
+    }
+
+    condition->local_opt();
+    update = update->const_fold();
+    body->local_opt();
+}
+
+void ast_jump_statement::local_opt() {
+    expression = expression->const_fold();
+}
+
+ast_expression* ast_identifier_expression::const_fold() {
+    return this;
+}
+
+ast_expression* ast_i_constant::const_fold() {
+    return this;
+}
+
+ast_expression* ast_f_constant::const_fold() {
+    return this;
+}
+
+ast_expression* ast_string_expression::const_fold() {
+    return this;
+}
+
+ast_expression* ast_postfix_expression::const_fold() {
+    ast_argument_list* new_arguments = new ast_argument_list();
+
+    for (argI ait = arguments->begin();
+        ait != arguments->end(); ait++) {
+            new_arguments->push_back((*ait)->const_fold());
+    }
+
+    arguments = new_arguments;
+    return this;
+}
+
+ast_expression* ast_unary_expression::const_fold() {
+    expression = expression->const_fold();
+    set_type(Int);
+    Symbol sym = expression->get_const();
+   
+    if (sym) {
+        int val = atoi(sym->c_str());
+
+        if(unary=='-') {
+            Symbol sym_val = int_table.add_string(std::to_string(-val));
+            ast_expression* i_const = new ast_i_constant(sym_val);
+            i_const->set_type(Int);
+            return i_const;
+        } else if(unary=='~'){
+            Symbol sym_val = int_table.add_string(std::to_string(~val));
+            ast_expression* i_const = new ast_i_constant(sym_val);
+            i_const->set_type(Int);
+            return i_const;
+        } else if(unary=='!'){
+            Symbol sym_val = int_table.add_string(std::to_string(!val));
+            ast_expression* i_const = new ast_i_constant(sym_val);
+            i_const->set_type(Int);
+            return i_const;
+        } else
+            return NULL;
+    } else {
+        return this;
+    }  
+}
+
+ast_expression* ast_mul_expression::const_fold() {
+    e1 = e1->const_fold();
+    e2 = e2->const_fold();
+    Symbol sym1 = e1->get_const();
+    Symbol sym2 = e2->get_const();
+
+    if (sym1 && sym2) {
+        if (e1->get_type() == Int && e2->get_type() == Int) {
+            int val1 = atoi(sym1->c_str());
+            int val2 = atoi(sym2->c_str());
+            Symbol sym_val = int_table.add_string(std::to_string(val1*val2));
+            ast_expression* i_const = new ast_i_constant(sym_val);
+            i_const->set_type(Int);
+            return i_const;
+        } else {
+            double val1 = atof(sym1->c_str());
+            double val2 = atof(sym2->c_str());
+            Symbol sym_val = float_table.add_string(std::to_string(val1*val2));
+            ast_expression* f_const = new ast_f_constant(sym_val);
+            f_const->set_type(Float);
+            return f_const;
+        }
+    } else {
+        return this;
+    }
+}
+
+ast_expression* ast_div_expression::const_fold() {
+    e1 = e1->const_fold();
+    e2 = e2->const_fold();
+    Symbol sym1 = e1->get_const();
+    Symbol sym2 = e2->get_const();
+
+    if (sym1 && sym2) {
+        if (e1->get_type() == Int && e2->get_type() == Int) {
+            int val1 = atoi(sym1->c_str());
+            int val2 = atoi(sym2->c_str());
+            Symbol sym_val = int_table.add_string(std::to_string(val1/val2));
+            ast_expression* i_const = new ast_i_constant(sym_val);
+            i_const->set_type(Int);
+            return i_const;
+        } else {
+            double val1 = atof(sym1->c_str());
+            double val2 = atof(sym2->c_str());
+            Symbol sym_val = float_table.add_string(std::to_string(val1/val2));
+            ast_expression* f_const = new ast_f_constant(sym_val);
+            f_const->set_type(Float);
+            return f_const;
+        }
+    } else {
+        return this;
+    }
+}
+
+ast_expression* ast_mod_expression::const_fold() {
+    e1 = e1->const_fold();
+    e2 = e2->const_fold();
+    Symbol sym1 = e1->get_const();
+    Symbol sym2 = e2->get_const();
+
+    if (sym1 && sym2) {
+        if (e1->get_type() == Int && e2->get_type() == Int) {
+            int val1 = atoi(sym1->c_str());
+            int val2 = atoi(sym2->c_str());
+            Symbol sym_val = int_table.add_string(std::to_string(val1%val2));
+            ast_expression* i_const = new ast_i_constant(sym_val);
+            i_const->set_type(Int);
+            return i_const;
+        } else {
+            my_assert(0,__LINE__, __FILE__)
+            // double val1 = atof(sym1->c_str());
+            // double val2 = atof(sym2->c_str());
+            // Symbol sym_val = float_table.add_string(std::to_string(val1%val2));
+            // ast_expression* f_const = new ast_f_constant(sym_val);
+            // f_const->set_type(Float);
+            // return f_const;
+            return this;
+        }
+    } else {
+        return this;
+    }
+}
+
+ast_expression* ast_add_expression::const_fold() {
+    e1 = e1->const_fold();
+    e2 = e2->const_fold();
+    Symbol sym1 = e1->get_const();
+    Symbol sym2 = e2->get_const();
+
+    if (sym1 && sym2) {
+        if (e1->get_type() == Int && e2->get_type() == Int) {
+            int val1 = atoi(sym1->c_str());
+            int val2 = atoi(sym2->c_str());
+            Symbol sym_val = int_table.add_string(std::to_string(val1+val2));
+            ast_expression* i_const = new ast_i_constant(sym_val);
+            i_const->set_type(Int);
+            return i_const;
+        } else {
+            double val1 = atof(sym1->c_str());
+            double val2 = atof(sym2->c_str());
+            Symbol sym_val = float_table.add_string(std::to_string(val1+val2));
+            ast_expression* f_const = new ast_f_constant(sym_val);
+            f_const->set_type(Float);
+            return f_const;
+        }
+    } else {
+        return this;
+    }
+}
+
+ast_expression* ast_sub_expression::const_fold() {
+    e1 = e1->const_fold();
+    e2 = e2->const_fold();
+    Symbol sym1 = e1->get_const();
+    Symbol sym2 = e2->get_const();
+
+    if (sym1 && sym2) {
+        if (e1->get_type() == Int && e2->get_type() == Int) {
+            int val1 = atoi(sym1->c_str());
+            int val2 = atoi(sym2->c_str());
+            Symbol sym_val = int_table.add_string(std::to_string(val1 - val2));
+            ast_expression* i_const = new ast_i_constant(sym_val);
+            i_const->set_type(Int);
+            return i_const;
+        } else {
+            double val1 = atof(sym1->c_str());
+            double val2 = atof(sym2->c_str());
+            Symbol sym_val = float_table.add_string(std::to_string(val1 - val2));
+            ast_expression* f_const = new ast_f_constant(sym_val);
+            f_const->set_type(Float);
+            return f_const;
+        }
+    } else {
+        return this;
+    }
+}
+
+ast_expression* ast_less_expression::const_fold() {
+    e1 = e1->const_fold();
+    e2 = e2->const_fold();
+    Symbol sym1 = e1->get_const();
+    Symbol sym2 = e2->get_const();
+
+    if (sym1 && sym2) {
+        if (e1->get_type() == Int && e2->get_type() == Int) {
+            int val1 = atoi(sym1->c_str());
+            int val2 = atoi(sym2->c_str());
+            Symbol sym_val = int_table.add_string(std::to_string(val1 < val2 ? 1 : 0));
+            ast_expression* i_const = new ast_i_constant(sym_val);
+            i_const->set_type(Int);
+            return i_const;
+        } else {
+            double val1 = atof(sym1->c_str());
+            double val2 = atof(sym2->c_str());
+            Symbol sym_val = int_table.add_string(std::to_string(val1 < val2 ? 1 : 0));
+            ast_expression* i_const = new ast_i_constant(sym_val);
+            i_const->set_type(Int);
+            return i_const;
+        }
+    } else {
+        return this;
+    }
+}
+
+ast_expression* ast_leq_expression::const_fold() {
+    e1 = e1->const_fold();
+    e2 = e2->const_fold();
+    Symbol sym1 = e1->get_const();
+    Symbol sym2 = e2->get_const();
+
+    if (sym1 && sym2) {
+        if (e1->get_type() == Int && e2->get_type() == Int) {
+            int val1 = atoi(sym1->c_str());
+            int val2 = atoi(sym2->c_str());
+            Symbol sym_val = int_table.add_string(std::to_string(val1 <= val2 ? 1 : 0));
+            ast_expression* i_const = new ast_i_constant(sym_val);
+            i_const->set_type(Int);
+            return i_const;
+        } else {
+            double val1 = atof(sym1->c_str());
+            double val2 = atof(sym2->c_str());
+            Symbol sym_val = int_table.add_string(std::to_string(val1 <= val2 ? 1 : 0));
+            ast_expression* i_const = new ast_i_constant(sym_val);
+            i_const->set_type(Int);
+            return i_const;
+        }
+    } else {
+        return this;
+    }
+}
+
+ast_expression* ast_eq_expression::const_fold() {
+    e1 = e1->const_fold();
+    e2 = e2->const_fold();
+    Symbol sym1 = e1->get_const();
+    Symbol sym2 = e2->get_const();
+
+    if (sym1 && sym2) {
+        if (e1->get_type() == Int && e2->get_type() == Int) {
+            int val1 = atoi(sym1->c_str());
+            int val2 = atoi(sym2->c_str());
+            Symbol sym_val = int_table.add_string(std::to_string(val1 == val2 ? 1 : 0));
+            ast_expression* i_const = new ast_i_constant(sym_val);
+            i_const->set_type(Int);
+            return i_const;
+        } else {
+            double val1 = atof(sym1->c_str());
+            double val2 = atof(sym2->c_str());
+            Symbol sym_val = int_table.add_string(std::to_string(val1 == val2 ? 1 : 0));
+            ast_expression* i_const = new ast_i_constant(sym_val);
+            i_const->set_type(Int);
+            return i_const;
+        }
+    } else {
+        return this;
+    }
+}
+
+ast_expression* ast_assign_expression::const_fold() {
+    expression = expression->const_fold();
+    return this;
+}
+
+ast_expression* ast_no_expression::const_fold() { 
+    return this;
 }
 
 /*------------------------------.
@@ -288,21 +646,21 @@ void InitializeModuleAndPassManager() {
     module = llvm::make_unique<llvm::Module>("col728 lab2",
             llvm_context);
 
-    // Create a new pass manager attached to it.
-    fpm = llvm::make_unique<llvm::legacy::FunctionPassManager>(module.get());
+    // // Create a new pass manager attached to it.
+    // fpm = llvm::make_unique<llvm::legacy::FunctionPassManager>(module.get());
 
-    // Promote allocas to registers.
-    fpm->add(llvm::createPromoteMemoryToRegisterPass());
-    // Do simple "peephole" optimizations and bit-twiddling optzns.
-    fpm->add(llvm::createInstructionCombiningPass());
-    // Reassociate expressions.
-    fpm->add(llvm::createReassociatePass());
-    // Eliminate Common SubExpressions.
-    fpm->add(llvm::createGVNPass());
-    // Simplify the control flow graph (deleting unreachable blocks, etc).
-    fpm->add(llvm::createCFGSimplificationPass());
+    // // Promote allocas to registers.
+    // fpm->add(llvm::createPromoteMemoryToRegisterPass());
+    // // Do simple "peephole" optimizations and bit-twiddling optzns.
+    // fpm->add(llvm::createInstructionCombiningPass());
+    // // Reassociate expressions.
+    // fpm->add(llvm::createReassociatePass());
+    // // Eliminate Common SubExpressions.
+    // fpm->add(llvm::createGVNPass());
+    // // Simplify the control flow graph (deleting unreachable blocks, etc).
+    // fpm->add(llvm::createCFGSimplificationPass());
 
-    fpm->doInitialization();
+    // fpm->doInitialization();
 }
 
 // Code generation function defined in appropriate AST nodes.
@@ -591,7 +949,7 @@ llvm::Function* ast_function_definition::CodeGen() {
     }
 
     llvm::verifyFunction(*function);
-    fpm->run(*function);
+    // fpm->run(*function);
 
     named_values.exit_scope();
     named_types.exit_scope();
