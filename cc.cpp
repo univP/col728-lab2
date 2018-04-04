@@ -49,7 +49,8 @@ SymTable<Symbol, std::string> variable_table;
 SymTable<Symbol, MethodType> method_table;
 std::vector<std::string> errors;
 std::unique_ptr<llvm::legacy::FunctionPassManager> fpm;
-int num_changes;
+std::map<Symbol, Symbol> const_vals;
+bool changed;
 
 // Majorly implements the last two phases namely
 //  semantic analysis and code generation.
@@ -185,85 +186,168 @@ void ast_external_declaration::local_opt() {
 }
 
 void ast_function_definition::local_opt() {
-    compound_statement->local_opt();
+    const_vals.clear();
+    do {
+        changed = false;
+        compound_statement = dynamic_cast<ast_compound_statement*>(
+            compound_statement->local_opt());
+    } while (changed);
 }
 
-void ast_compound_statement::local_opt() {
+// Must return value of type ast_compound_statement*
+ast_statement* ast_compound_statement::local_opt() {
     for (ListI lit = block_items->begin();
         lit != block_items->end(); lit++) {
             (*lit)->local_opt();
     }
+
+    return this;
 }
 
 void ast_block_item::local_opt() {
     if (index == 1) {
-        data.statement->local_opt();
+        data.statement = data.statement->local_opt();
     }
 }
 
-void ast_expression_statement::local_opt() {
-    expression = expression->const_fold();
+ast_statement* ast_expression_statement::local_opt() {
+    expression = expression->local_opt();
+    return this;
 }
 
-void ast_mif_statement::local_opt() {
-    condition = condition->const_fold();
-    then_statement->local_opt();
-    else_statement->local_opt();
+ast_statement* ast_mif_statement::local_opt() {
+    condition = condition->local_opt();
+    const_vals.clear();
+    then_statement = then_statement->local_opt();
+    const_vals.clear();
+    else_statement = else_statement->local_opt();
+    const_vals.clear();
+    Symbol sym = condition->get_const();
+
+    if (sym) {
+        changed = true;
+        int val = atoi(sym->c_str());
+        
+        if (val) {
+            return then_statement;
+        } else {
+            return else_statement;
+        }
+    } else {
+        return this;
+    }
 }
 
-void ast_uif_statement::local_opt() {
-    condition = condition->const_fold();
-    then_statement->local_opt();
+ast_statement* ast_uif_statement::local_opt() {
+    condition = condition->local_opt();
+    const_vals.clear();
+    then_statement = then_statement->local_opt();
+    const_vals.clear();
+    Symbol sym = condition->get_const();
+
+    if (sym) {
+        changed = true;
+        int val = atoi(sym->c_str());
+
+        if (val) {
+            return then_statement;
+        } else {
+            ast_expression* no_expr = new ast_no_expression();
+            no_expr->set_type(No_type);
+            return new ast_expression_statement(no_expr);
+        }
+    } else {
+        return this;
+    }
 }
 
-void ast_for_statement::local_opt() {
+ast_statement* ast_for_statement::local_opt() {
     if (index == 0) {
-        data.expression_statement->local_opt();
+        data.expression_statement = dynamic_cast<ast_expression_statement*>(
+            data.expression_statement->local_opt());
     }
 
+    const_vals.clear();
     condition->local_opt();
-    update = update->const_fold();
+    const_vals.clear();
     body->local_opt();
+    update = update->local_opt();
+    const_vals.clear();
+    Symbol sym = condition->get_expression()->get_const();
+
+    if (sym) {
+        int val = atoi(sym->c_str());
+
+        if (!val) {
+            changed = true;
+            ast_expression* no_expr = new ast_no_expression();
+            no_expr->set_type(No_type);
+            return new ast_expression_statement(no_expr);
+        } else {
+            return this;
+        }
+    } else {
+        return this;
+    }
 }
 
-void ast_jump_statement::local_opt() {
-    expression = expression->const_fold();
-}
-
-ast_expression* ast_identifier_expression::const_fold() {
+ast_statement* ast_jump_statement::local_opt() {
+    expression = expression->local_opt();
+    const_vals.clear();
     return this;
 }
 
-ast_expression* ast_i_constant::const_fold() {
+ast_expression* ast_identifier_expression::local_opt() {
+    std::map<Symbol, Symbol>::iterator mit = const_vals.find(identifier);
+
+    if (mit != const_vals.end()) {
+        changed = true;
+
+        if (get_type() == Int) {
+            ast_expression* i_const = new ast_i_constant(mit->second);
+            i_const->set_type(Int);
+            return i_const;
+        } else {
+            ast_expression* f_const = new ast_f_constant(mit->second);
+            f_const->set_type(Float);
+            return f_const;
+        }
+    } else {
+        return this;
+    }
+}
+
+ast_expression* ast_i_constant::local_opt() {
     return this;
 }
 
-ast_expression* ast_f_constant::const_fold() {
+ast_expression* ast_f_constant::local_opt() {
     return this;
 }
 
-ast_expression* ast_string_expression::const_fold() {
+ast_expression* ast_string_expression::local_opt() {
     return this;
 }
 
-ast_expression* ast_postfix_expression::const_fold() {
+ast_expression* ast_postfix_expression::local_opt() {
     ast_argument_list* new_arguments = new ast_argument_list();
 
     for (argI ait = arguments->begin();
         ait != arguments->end(); ait++) {
-            new_arguments->push_back((*ait)->const_fold());
+            new_arguments->push_back((*ait)->local_opt());
     }
 
     arguments = new_arguments;
     return this;
 }
 
-ast_expression* ast_unary_expression::const_fold() {
-    expression = expression->const_fold();
+ast_expression* ast_unary_expression::local_opt() {
+    expression = expression->local_opt();
     set_type(Int);
     Symbol sym = expression->get_const();
    
     if (sym) {
+        changed = true;
         int val = atoi(sym->c_str());
 
         if(unary=='-') {
@@ -288,13 +372,15 @@ ast_expression* ast_unary_expression::const_fold() {
     }  
 }
 
-ast_expression* ast_mul_expression::const_fold() {
-    e1 = e1->const_fold();
-    e2 = e2->const_fold();
+ast_expression* ast_mul_expression::local_opt() {
+    e1 = e1->local_opt();
+    e2 = e2->local_opt();
     Symbol sym1 = e1->get_const();
     Symbol sym2 = e2->get_const();
 
     if (sym1 && sym2) {
+        changed = true;
+
         if (e1->get_type() == Int && e2->get_type() == Int) {
             int val1 = atoi(sym1->c_str());
             int val2 = atoi(sym2->c_str());
@@ -315,13 +401,15 @@ ast_expression* ast_mul_expression::const_fold() {
     }
 }
 
-ast_expression* ast_div_expression::const_fold() {
-    e1 = e1->const_fold();
-    e2 = e2->const_fold();
+ast_expression* ast_div_expression::local_opt() {
+    e1 = e1->local_opt();
+    e2 = e2->local_opt();
     Symbol sym1 = e1->get_const();
     Symbol sym2 = e2->get_const();
 
     if (sym1 && sym2) {
+        changed = true;
+
         if (e1->get_type() == Int && e2->get_type() == Int) {
             int val1 = atoi(sym1->c_str());
             int val2 = atoi(sym2->c_str());
@@ -342,13 +430,15 @@ ast_expression* ast_div_expression::const_fold() {
     }
 }
 
-ast_expression* ast_mod_expression::const_fold() {
-    e1 = e1->const_fold();
-    e2 = e2->const_fold();
+ast_expression* ast_mod_expression::local_opt() {
+    e1 = e1->local_opt();
+    e2 = e2->local_opt();
     Symbol sym1 = e1->get_const();
     Symbol sym2 = e2->get_const();
 
     if (sym1 && sym2) {
+        changed = true;
+
         if (e1->get_type() == Int && e2->get_type() == Int) {
             int val1 = atoi(sym1->c_str());
             int val2 = atoi(sym2->c_str());
@@ -371,13 +461,15 @@ ast_expression* ast_mod_expression::const_fold() {
     }
 }
 
-ast_expression* ast_add_expression::const_fold() {
-    e1 = e1->const_fold();
-    e2 = e2->const_fold();
+ast_expression* ast_add_expression::local_opt() {
+    e1 = e1->local_opt();
+    e2 = e2->local_opt();
     Symbol sym1 = e1->get_const();
     Symbol sym2 = e2->get_const();
 
     if (sym1 && sym2) {
+        changed = true;
+
         if (e1->get_type() == Int && e2->get_type() == Int) {
             int val1 = atoi(sym1->c_str());
             int val2 = atoi(sym2->c_str());
@@ -398,13 +490,15 @@ ast_expression* ast_add_expression::const_fold() {
     }
 }
 
-ast_expression* ast_sub_expression::const_fold() {
-    e1 = e1->const_fold();
-    e2 = e2->const_fold();
+ast_expression* ast_sub_expression::local_opt() {
+    e1 = e1->local_opt();
+    e2 = e2->local_opt();
     Symbol sym1 = e1->get_const();
     Symbol sym2 = e2->get_const();
 
     if (sym1 && sym2) {
+        changed = true;
+
         if (e1->get_type() == Int && e2->get_type() == Int) {
             int val1 = atoi(sym1->c_str());
             int val2 = atoi(sym2->c_str());
@@ -425,13 +519,15 @@ ast_expression* ast_sub_expression::const_fold() {
     }
 }
 
-ast_expression* ast_less_expression::const_fold() {
-    e1 = e1->const_fold();
-    e2 = e2->const_fold();
+ast_expression* ast_less_expression::local_opt() {
+    e1 = e1->local_opt();
+    e2 = e2->local_opt();
     Symbol sym1 = e1->get_const();
     Symbol sym2 = e2->get_const();
 
     if (sym1 && sym2) {
+        changed = true;
+
         if (e1->get_type() == Int && e2->get_type() == Int) {
             int val1 = atoi(sym1->c_str());
             int val2 = atoi(sym2->c_str());
@@ -452,13 +548,15 @@ ast_expression* ast_less_expression::const_fold() {
     }
 }
 
-ast_expression* ast_leq_expression::const_fold() {
-    e1 = e1->const_fold();
-    e2 = e2->const_fold();
+ast_expression* ast_leq_expression::local_opt() {
+    e1 = e1->local_opt();
+    e2 = e2->local_opt();
     Symbol sym1 = e1->get_const();
     Symbol sym2 = e2->get_const();
 
     if (sym1 && sym2) {
+        changed = true;
+
         if (e1->get_type() == Int && e2->get_type() == Int) {
             int val1 = atoi(sym1->c_str());
             int val2 = atoi(sym2->c_str());
@@ -479,13 +577,15 @@ ast_expression* ast_leq_expression::const_fold() {
     }
 }
 
-ast_expression* ast_eq_expression::const_fold() {
-    e1 = e1->const_fold();
-    e2 = e2->const_fold();
+ast_expression* ast_eq_expression::local_opt() {
+    e1 = e1->local_opt();
+    e2 = e2->local_opt();
     Symbol sym1 = e1->get_const();
     Symbol sym2 = e2->get_const();
 
     if (sym1 && sym2) {
+        changed = true;
+
         if (e1->get_type() == Int && e2->get_type() == Int) {
             int val1 = atoi(sym1->c_str());
             int val2 = atoi(sym2->c_str());
@@ -506,12 +606,19 @@ ast_expression* ast_eq_expression::const_fold() {
     }
 }
 
-ast_expression* ast_assign_expression::const_fold() {
-    expression = expression->const_fold();
+ast_expression* ast_assign_expression::local_opt() {
+    expression = expression->local_opt();
+    const_vals.erase(identifier);
+    Symbol sym = expression->get_const();
+
+    if (sym) {
+        const_vals.insert(make_pair(identifier, sym));
+    }
+
     return this;
 }
 
-ast_expression* ast_no_expression::const_fold() { 
+ast_expression* ast_no_expression::local_opt() { 
     return this;
 }
 

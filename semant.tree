@@ -59,6 +59,68 @@
 									4: int
 								5: int
 				.block_item
+					.expression_statement
+						.assign_expression
+							y
+							.multiply_expression
+								y: int
+								4: int
+				.block_item
+					.mid_statement
+						0: int
+						.compound_statement
+							.block_item
+								.expression_statement
+									.assign_expression
+										y
+										.sub_expression
+											12: int
+											5: int
+						.compound_statement
+							.block_item
+								.expression_statement
+									.assign_expression
+										y
+										.sub_expression
+											5: int
+											12: int
+				.block_item
+					.mid_statement
+						1: int
+						.compound_statement
+							.block_item
+								.expression_statement
+									.assign_expression
+										y
+										.sub_expression
+											12: int
+											5: int
+						.compound_statement
+							.block_item
+								.expression_statement
+									.assign_expression
+										y
+										.sub_expression
+											5: int
+											12: int
+				.block_item
+					.for_statement
+						.expression_statement
+							.no_expression
+						.expression_statement
+							0: int
+						.no_expression
+						.compound_statement
+							.block_item
+								.expression_statement
+									.assign_expression
+										y
+										.multiply_expression
+											.multiply_expression
+												12: int
+												5: int
+											9: int
+				.block_item
 					.jump_statement
 						0: int
 
