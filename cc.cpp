@@ -210,6 +210,7 @@ void ast_block_item::local_opt() {
     }
 }
 
+// Must return value of type ast_expression*
 ast_statement* ast_expression_statement::local_opt() {
     expression = expression->local_opt();
     return this;
@@ -229,9 +230,21 @@ ast_statement* ast_mif_statement::local_opt() {
         int val = atoi(sym->c_str());
         
         if (val) {
-            return then_statement;
+            ast_block_item_list* block_items = new ast_block_item_list();
+            block_items->push_back(new ast_block_item(
+                new ast_expression_statement(condition)));
+            block_items->push_back(new ast_block_item(then_statement));
+            ast_compound_statement* stmt = new ast_compound_statement(
+                block_items);
+            return stmt;
         } else {
-            return else_statement;
+            ast_block_item_list* block_items = new ast_block_item_list();
+            block_items->push_back(new ast_block_item(
+                new ast_expression_statement(condition)));
+            block_items->push_back(new ast_block_item(else_statement));
+            ast_compound_statement* stmt = new ast_compound_statement(
+                block_items);
+            return stmt;
         }
     } else {
         return this;
@@ -250,11 +263,15 @@ ast_statement* ast_uif_statement::local_opt() {
         int val = atoi(sym->c_str());
 
         if (val) {
-            return then_statement;
+            ast_block_item_list* block_items = new ast_block_item_list();
+            block_items->push_back(new ast_block_item(
+                new ast_expression_statement(condition)));
+            block_items->push_back(new ast_block_item(then_statement));
+            ast_compound_statement* stmt = new ast_compound_statement(
+                block_items);
+            return stmt;
         } else {
-            ast_expression* no_expr = new ast_no_expression();
-            no_expr->set_type(No_type);
-            return new ast_expression_statement(no_expr);
+            return new ast_expression_statement(condition);
         }
     } else {
         return this;
@@ -268,21 +285,23 @@ ast_statement* ast_for_statement::local_opt() {
     }
 
     const_vals.clear();
-    condition->local_opt();
-    const_vals.clear();
-    body->local_opt();
+    condition = dynamic_cast<ast_expression_statement*>(
+            condition->local_opt());
+    Symbol sym = condition->get_expression()->get_const();
+    body = body->local_opt();
     update = update->local_opt();
     const_vals.clear();
-    Symbol sym = condition->get_expression()->get_const();
 
     if (sym) {
         int val = atoi(sym->c_str());
 
         if (!val) {
-            changed = true;
-            ast_expression* no_expr = new ast_no_expression();
-            no_expr->set_type(No_type);
-            return new ast_expression_statement(no_expr);
+            ast_block_item_list* block_items = new ast_block_item_list();
+            block_items->push_back(new ast_block_item(data.expression_statement));
+            block_items->push_back(new ast_block_item(condition));
+            ast_compound_statement* stmt = new ast_compound_statement(
+                block_items);
+            return stmt;
         } else {
             return this;
         }
@@ -1778,7 +1797,7 @@ std::ostream& ast_declarator::print_struct(int d, std::ostream& s, Symbol type) 
 
 std::ostream& ast_mif_statement::print_struct(int d, std::ostream& s,
         Symbol type) {
-    pad(d, s) << ".mid_statement" << std::endl;
+    pad(d, s) << ".mif_statement" << std::endl;
     condition->print_struct(d+1, s);
     then_statement->print_struct(d+1, s, type);
     else_statement->print_struct(d+1, s, type);
@@ -1787,7 +1806,7 @@ std::ostream& ast_mif_statement::print_struct(int d, std::ostream& s,
 
 std::ostream& ast_uif_statement::print_struct(int d, std::ostream& s,
         Symbol type) {
-    pad(d, s) << ".uid_statement" << std::endl;
+    pad(d, s) << ".uif_statement" << std::endl;
     condition->print_struct(d+1, s);
     then_statement->print_struct(d+1, s, type);
     return s;

@@ -260,7 +260,7 @@ public:
     std::ostream& print_struct(int d, std::ostream& s);
     llvm::Value* CodeGen();
     ast_expression* local_opt();
-    Symbol get_const() { return NULL; }
+    Symbol get_const() { return expression->get_const(); }
 };
 
 class ast_block_item : public ast_struct {
