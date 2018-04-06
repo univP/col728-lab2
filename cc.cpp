@@ -172,6 +172,16 @@ main(int argc, char **argv)
 |   Section 2: Local Optimization   |
 `----------------------------------*/
 
+bool is_power2(int x) {
+    return (x & (x-1)) == 0;
+}
+
+int log2(int x) {
+    int i;
+    for (i = 0; x; x >>= 1, i++);
+    return i-1;
+}
+
 void ast_program::local_opt() {
     for (ListI lit = external_declarations->begin();
         lit != external_declarations->end(); lit++) {
@@ -375,9 +385,9 @@ ast_expression* ast_shl_expression::local_opt() {
         i_const->set_type(Int);
         return i_const;
     } else if (sym2) {
-        changed = true;
         int val = atoi(sym2->c_str());
         if (val == 0) {
+            changed = true;
             return shift_expr;
         } else {
             return this;
@@ -402,9 +412,9 @@ ast_expression* ast_shr_expression::local_opt() {
         i_const->set_type(Int);
         return i_const;
     } else if (sym2) {
-        changed = true;
         int val = atoi(sym2->c_str());
         if (val == 0) {
+            changed = true;
             return shift_expr;
         } else {
             return this;
@@ -470,18 +480,27 @@ ast_expression* ast_mul_expression::local_opt() {
             return f_const;
         }
     } else if (sym1) {
-        changed = true;
-
         if (e1->get_type() == Int) {
             int val = atoi(sym1->c_str());
 
             if (val == 0) {
+                changed = true;
                 Symbol sym_val = int_table.add_string(std::to_string(0));
                 ast_expression* i_const = new ast_i_constant(sym_val);
                 i_const->set_type(Int);
                 return i_const;
             } else if (val == 1) {
+                changed = true;
                 return e2;
+            } else if (is_power2(val)) {
+                changed = true;
+                int base = log2(val);
+                Symbol sym_val = int_table.add_string(std::to_string(base));
+                ast_expression* i_const = new ast_i_constant(sym_val);
+                i_const->set_type(Int);
+                ast_expression* shift_expr = new ast_shl_expression(e2, i_const);
+                shift_expr->set_type(Int);
+                return shift_expr;
             } else {
                 return this;
             }
@@ -489,29 +508,40 @@ ast_expression* ast_mul_expression::local_opt() {
             double val = atof(sym1->c_str());
 
             if (val == 0.0) {
+                changed = true;
                 Symbol sym_val = float_table.add_string(std::to_string(0.0));
                 ast_expression* f_const = new ast_f_constant(sym_val);
                 f_const->set_type(Float);
                 return f_const;
             } else if (val == 1.0) {
+                changed = true;
                 return e2;
             } else {
                 return this;
             }
         }
     } else if (sym2) {
-        changed = true;
-
         if (e2->get_type() == Int) {
             int val = atoi(sym2->c_str());
 
             if (val == 0) {
+                changed = true;
                 Symbol sym_val = int_table.add_string(std::to_string(0));
                 ast_expression* i_const = new ast_i_constant(sym_val);
                 i_const->set_type(Int);
                 return i_const;
             } else if (val == 1) {
+                changed = true;
                 return e1;
+            } else if (is_power2(val)) {
+                changed = true;
+                int base = log2(val);
+                Symbol sym_val = int_table.add_string(std::to_string(base));
+                ast_expression* i_const = new ast_i_constant(sym_val);
+                i_const->set_type(Int);
+                ast_expression* shift_expr = new ast_shl_expression(e1, i_const);
+                shift_expr->set_type(Int);
+                return shift_expr;
             } else {
                 return this;
             }
@@ -519,11 +549,13 @@ ast_expression* ast_mul_expression::local_opt() {
             double val = atof(sym2->c_str());
 
             if (val == 0.0) {
+                changed = true;
                 Symbol sym_val = float_table.add_string(std::to_string(0.0));
                 ast_expression* f_const = new ast_f_constant(sym_val);
                 f_const->set_type(Float);
                 return f_const;
             } else if (val == 1.0) {
+                changed = true;
                 return e1;
             } else {
                 return this;
@@ -559,12 +591,11 @@ ast_expression* ast_div_expression::local_opt() {
             return f_const;
         }
     } else if (sym1) {
-        changed = true;
-
         if (e1->get_type() == Int) {
             int val = atoi(sym1->c_str());
 
             if (val == 0) {
+                changed = true;
                 Symbol sym_val = int_table.add_string(std::to_string(0));
                 ast_expression* i_const = new ast_i_constant(sym_val);
                 i_const->set_type(Int);
@@ -573,14 +604,26 @@ ast_expression* ast_div_expression::local_opt() {
                 return this;
             }
         } else {
-            my_assert(0,__LINE__, __FILE__);
-            // double val = atof(sym1->c_str());
+            return this;
+        }
+    } else if (sym2) {
+        if (e2->get_type() == Int) {
+            int val = atoi(sym2->c_str());
 
-            // if (val == 0.0) {
-            //     return e2;
-            // } else {
-            //     return this;
-            // }
+            if (is_power2(val)) {
+                changed = true;
+                int base = log2(val);
+                Symbol sym_val = int_table.add_string(std::to_string(base));
+                ast_expression* i_const = new ast_i_constant(sym_val);
+                i_const->set_type(Int);
+                ast_expression* shift_expr = new ast_shr_expression(e1, i_const);
+                shift_expr->set_type(Int);
+                return shift_expr;
+            } else {
+                return this;
+            }
+        } else {
+            return this;
         }
     } else {
         return this;
@@ -595,47 +638,23 @@ ast_expression* ast_mod_expression::local_opt() {
 
     if (sym1 && sym2) {
         changed = true;
+        int val1 = atoi(sym1->c_str());
+        int val2 = atoi(sym2->c_str());
+        Symbol sym_val = int_table.add_string(std::to_string(val1%val2));
+        ast_expression* i_const = new ast_i_constant(sym_val);
+        i_const->set_type(Int);
+        return i_const;
+    } else if (sym1) {
+        int val = atoi(sym1->c_str());
 
-        if (e1->get_type() == Int && e2->get_type() == Int) {
-            int val1 = atoi(sym1->c_str());
-            int val2 = atoi(sym2->c_str());
-            Symbol sym_val = int_table.add_string(std::to_string(val1%val2));
+        if (val == 0) {
+            changed = true;
+            Symbol sym_val = int_table.add_string(std::to_string(0));
             ast_expression* i_const = new ast_i_constant(sym_val);
             i_const->set_type(Int);
             return i_const;
         } else {
-            my_assert(0,__LINE__, __FILE__);
-            // double val1 = atof(sym1->c_str());
-            // double val2 = atof(sym2->c_str());
-            // Symbol sym_val = float_table.add_string(std::to_string(val1%val2));
-            // ast_expression* f_const = new ast_f_constant(sym_val);
-            // f_const->set_type(Float);
-            // return f_const;
             return this;
-        }
-    } else if (sym1) {
-        changed = true;
-
-        if (e1->get_type() == Int) {
-            int val = atoi(sym1->c_str());
-
-            if (val == 0) {
-                Symbol sym_val = int_table.add_string(std::to_string(0));
-                ast_expression* i_const = new ast_i_constant(sym_val);
-                i_const->set_type(Int);
-                return i_const;
-            } else {
-                return this;
-            }
-        } else {
-            my_assert(0,__LINE__, __FILE__);
-            // double val = atof(sym1->c_str());
-
-            // if (val == 0.0) {
-            //     return e2;
-            // } else {
-            //     return this;
-            // }
         }
     } else {
         return this;
@@ -667,12 +686,11 @@ ast_expression* ast_add_expression::local_opt() {
             return f_const;
         }
     } else if (sym1) {
-        changed = true;
-
         if (e1->get_type() == Int) {
             int val = atoi(sym1->c_str());
 
             if (val == 0) {
+                changed = true;
                 return e2;
             } else {
                 return this;
@@ -681,18 +699,18 @@ ast_expression* ast_add_expression::local_opt() {
             double val = atof(sym1->c_str());
 
             if (val == 0.0) {
+                changed = true;
                 return e2;
             } else {
                 return this;
             }
         }
     } else if (sym2) {
-        changed = true;
-
         if (e2->get_type() == Int) {
             int val = atoi(sym2->c_str());
 
             if (val == 0) {
+                changed = true;
                 return e1;
             } else {
                 return this;
@@ -701,6 +719,7 @@ ast_expression* ast_add_expression::local_opt() {
             double val = atof(sym2->c_str());
 
             if (val == 0.0) {
+                changed = true;
                 return e1;
             } else {
                 return this;
@@ -736,12 +755,11 @@ ast_expression* ast_sub_expression::local_opt() {
             return f_const;
         }
     }  else if (sym1) {
-        changed = true;
-
         if (e1->get_type() == Int) {
             int val = atoi(sym1->c_str());
 
             if (val == 0) {
+                changed = true;
                 ast_expression* unary_expr = new ast_unary_expression('-', e2);
                 unary_expr->set_type(Int);
                 return unary_expr;
@@ -752,6 +770,7 @@ ast_expression* ast_sub_expression::local_opt() {
             double val = atof(sym1->c_str());
 
             if (val == 0.0) {
+                changed = true;
                 ast_expression* unary_expr = new ast_unary_expression('-', e2);
                 unary_expr->set_type(Float);
                 return unary_expr;
@@ -760,12 +779,11 @@ ast_expression* ast_sub_expression::local_opt() {
             }
         }
     } else if (sym2) {
-        changed = true;
-
         if (e2->get_type() == Int) {
             int val = atoi(sym2->c_str());
 
             if (val == 0) {
+                changed = true;
                 return e1;
             } else {
                 return this;
@@ -774,6 +792,7 @@ ast_expression* ast_sub_expression::local_opt() {
             double val = atof(sym2->c_str());
 
             if (val == 0.0) {
+                changed = true;
                 return e1;
             } else {
                 return this;
@@ -1438,9 +1457,6 @@ llvm::Value* ast_mod_expression::CodeGen(){
             is_same_type(e2->get_type(), Int)){
         set_type(Int);
         return builder.CreateSRem(e1_eval, e2_eval, "modtmp");
-    } else if (e1->get_type() == Float && e2->get_type() == Float) {
-        set_type(Float);
-        return builder.CreateFRem(e1_eval, e2_eval, "modtmp");
     }
 
     return nullptr;
@@ -1987,8 +2003,6 @@ std::ostream& ast_mod_expression::print_struct(int d, std::ostream& s) {
     if (is_same_type(e1->get_type(), Int) && 
             is_same_type(e2->get_type(), Int)) {
         set_type(Int);
-    } else if (e1->get_type() == Float && e2->get_type() == Float) {
-        set_type(Float);
     } else {
         errors.push_back("Invalid type of arguments.");
     }
