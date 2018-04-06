@@ -734,6 +734,20 @@ ast_expression* ast_mod_expression::local_opt() {
         } else {
             return this;
         }
+    } else if (sym2) {
+        int val = atoi(sym2->c_str());
+        
+        if (is_power2(val)) {
+            changed = true;
+            Symbol sym_val = int_table.add_string(std::to_string(val-1));
+            ast_expression* i_const = new ast_i_constant(sym_val);
+            i_const->set_type(Int);
+            ast_expression* and_expr = new ast_and_expression(e1, i_const);
+            and_expr->set_type(Int);
+            return and_expr;
+        } else {
+            return this;
+        }
     } else {
         return this;
     }

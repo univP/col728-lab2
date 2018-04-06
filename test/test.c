@@ -1,16 +1,19 @@
 int printf(char* format, ...);
 
-void and(int x, int y) {
-    x = x & y;
-    int p, q, r, s;
-    p = x & 0;
-    p = 0 & x;
-    r = -1 & y;
-    s = y & -1;
+int and(int x, int y) {
+    int z;
+    z = x & y;
+    z = x & 0;
+    z = 0 & x;
+    z = -1 & y;
+    z = y & -1;
+    z = x % 8;
+    return z;
 }
 
 int main() {
     int y,x;
     x = (y = 3) * 2;
+    printf("%d\n", and(31, 23));
     return 0;
 }
