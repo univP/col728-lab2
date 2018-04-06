@@ -141,6 +141,19 @@ public:
     Symbol get_const() { return NULL; }
 };
 
+class ast_unary_expression : public ast_expression {
+private:
+    char unary;
+    ast_expression* expression;
+public:
+    ast_unary_expression(char unary, 
+        ast_expression* expression): unary(unary), expression(expression) {}
+    std::ostream& print_struct(int d, std::ostream& s);
+    llvm::Value* CodeGen();
+    ast_expression* local_opt();
+    Symbol get_const() { return NULL; }
+};
+
 class ast_shl_expression : public ast_expression {
 private:
     ast_expression* shift_expr;
@@ -167,13 +180,13 @@ public:
     Symbol get_const() { return NULL; }
 };
 
-class ast_unary_expression : public ast_expression {
+class ast_and_expression : public ast_expression {
 private:
-    char unary;
-    ast_expression* expression;
+    ast_expression* e1;
+    ast_expression* e2;
 public:
-    ast_unary_expression(char unary, 
-        ast_expression* expression): unary(unary), expression(expression) {}
+    ast_and_expression(ast_expression* e1, ast_expression* e2)
+        : e1(e1), e2(e2) {}
     std::ostream& print_struct(int d, std::ostream& s);
     llvm::Value* CodeGen();
     ast_expression* local_opt();

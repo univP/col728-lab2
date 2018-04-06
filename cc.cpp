@@ -455,6 +455,53 @@ ast_expression* ast_unary_expression::local_opt() {
     }  
 }
 
+ast_expression* ast_and_expression::local_opt() {
+    e1 = e1->local_opt();
+    e2 = e2->local_opt();
+    Symbol sym1 = e1->get_const();
+    Symbol sym2 = e2->get_const();
+
+    if (sym1 && sym2) {
+        changed = true;
+        int val1 = atoi(sym1->c_str());
+        int val2 = atoi(sym2->c_str());
+        Symbol sym_val = int_table.add_string(std::to_string(val1 & val2));
+        ast_expression* i_const = new ast_i_constant(sym_val);
+        i_const->set_type(Int);
+        return i_const;
+    } else if (sym1) {
+        int val = atoi(sym1->c_str());
+        if (val == 0) {
+            changed = true;
+            Symbol sym_val = int_table.add_string(std::to_string(0));
+            ast_expression* i_const = new ast_i_constant(sym_val);
+            i_const->set_type(Int);
+            return i_const;
+        } else if (val == -1) {
+            changed = true;
+            return e2;
+        } else {
+            return this;
+        }
+    } else if (sym2) {
+        int val = atoi(sym2->c_str());
+        if (val == 0) {
+            changed = true;
+            Symbol sym_val = int_table.add_string(std::to_string(0));
+            ast_expression* i_const = new ast_i_constant(sym_val);
+            i_const->set_type(Int);
+            return i_const;
+        } else if (val == -1) {
+            changed = true;
+            return e1;
+        } else {
+            return this;
+        }
+    } else {
+        return this;
+    }
+}
+
 ast_expression* ast_mul_expression::local_opt() {
     e1 = e1->local_opt();
     e2 = e2->local_opt();
@@ -1448,6 +1495,19 @@ llvm::Value* ast_unary_expression::CodeGen(){
 // Arithmetic operators, we handle all of +, -, *, /, %
 //  however we operate only between two ints or two floats
 //  which is sufficient enough.
+llvm::Value* ast_and_expression::CodeGen(){
+    llvm::Value* e1_eval = e1->CodeGen();
+    llvm::Value* e2_eval = e2->CodeGen();
+
+    if (is_same_type(e1->get_type(), Int) && 
+            is_same_type(e2->get_type(), Int)){
+        set_type(Int);
+        return builder.CreateAnd(e1_eval, e2_eval, "bitandtmp");
+    }
+
+    return nullptr;
+}
+
 llvm::Value* ast_mul_expression::CodeGen(){
     llvm::Value* e1_eval = e1->CodeGen();
     llvm::Value* e2_eval = e2->CodeGen();
@@ -1953,6 +2013,21 @@ std::ostream& ast_unary_expression::print_struct(int d, std::ostream& s) {
         errors.push_back("Invalid type of argument.");
     } else {
         set_type(Int);
+    }
+
+    return s;
+}
+
+std::ostream& ast_and_expression::print_struct(int d, std::ostream& s) {
+    pad(d, s) << ".and_expression" << std::endl;
+    e1->print_struct(d+1, s);  
+    e2->print_struct(d+1, s); 
+
+    if (is_same_type(e1->get_type(), Int) && 
+            is_same_type(e2->get_type(), Int)) {
+        set_type(Int);
+    } else {
+        errors.push_back("Invalid type of arguments.");
     }
 
     return s;

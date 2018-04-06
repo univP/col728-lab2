@@ -52,6 +52,7 @@ ast_program* program;
 %type <expression> shift_expression
 %type <expression> relational_expression
 %type <expression> equality_expression
+%type <expression> and_expression
 %type <expression> assignment_expression
 %type <statement> jump_statement
 %type <statement> iteration_statement
@@ -177,8 +178,15 @@ equality_expression
 	{ $$ = new ast_eq_expression($1, $3); }
 	;
 
-assignment_expression
+and_expression
 	: equality_expression
+	{ $$ = $1; }
+	| and_expression '&' equality_expression
+	{ $$ = new ast_and_expression($1, $3); }
+	;
+
+assignment_expression
+	: and_expression
 	{ $$ = $1; }
 	| IDENTIFIER '=' assignment_expression
 	{ $$ = new ast_assign_expression($1, $3); }
