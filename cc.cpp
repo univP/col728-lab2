@@ -360,6 +360,60 @@ ast_expression* ast_postfix_expression::local_opt() {
     return this;
 }
 
+ast_expression* ast_shl_expression::local_opt() {
+    shift_expr = shift_expr->local_opt();
+    add_expr = add_expr->local_opt();
+    Symbol sym1 = shift_expr->get_const();
+    Symbol sym2 = add_expr->get_const();
+
+    if (sym1 && sym2) {
+        changed = true;
+        int val1 = atoi(sym1->c_str());
+        int val2 = atoi(sym2->c_str());
+        Symbol sym_val = int_table.add_string(std::to_string(val1 << val2));
+        ast_expression* i_const = new ast_i_constant(sym_val);
+        i_const->set_type(Int);
+        return i_const;
+    } else if (sym2) {
+        changed = true;
+        int val = atoi(sym2->c_str());
+        if (val == 0) {
+            return shift_expr;
+        } else {
+            return this;
+        }
+    } else {
+        return this;
+    }
+}
+
+ast_expression* ast_shr_expression::local_opt() {
+    shift_expr = shift_expr->local_opt();
+    add_expr = add_expr->local_opt();
+    Symbol sym1 = shift_expr->get_const();
+    Symbol sym2 = add_expr->get_const();
+
+    if (sym1 && sym2) {
+        changed = true;
+        int val1 = atoi(sym1->c_str());
+        int val2 = atoi(sym2->c_str());
+        Symbol sym_val = int_table.add_string(std::to_string(val1 >> val2));
+        ast_expression* i_const = new ast_i_constant(sym_val);
+        i_const->set_type(Int);
+        return i_const;
+    } else if (sym2) {
+        changed = true;
+        int val = atoi(sym2->c_str());
+        if (val == 0) {
+            return shift_expr;
+        } else {
+            return this;
+        }
+    } else {
+        return this;
+    }
+}
+
 ast_expression* ast_unary_expression::local_opt() {
     expression = expression->local_opt();
     set_type(Int);
@@ -415,6 +469,66 @@ ast_expression* ast_mul_expression::local_opt() {
             f_const->set_type(Float);
             return f_const;
         }
+    } else if (sym1) {
+        changed = true;
+
+        if (e1->get_type() == Int) {
+            int val = atoi(sym1->c_str());
+
+            if (val == 0) {
+                Symbol sym_val = int_table.add_string(std::to_string(0));
+                ast_expression* i_const = new ast_i_constant(sym_val);
+                i_const->set_type(Int);
+                return i_const;
+            } else if (val == 1) {
+                return e2;
+            } else {
+                return this;
+            }
+        } else {
+            double val = atof(sym1->c_str());
+
+            if (val == 0.0) {
+                Symbol sym_val = float_table.add_string(std::to_string(0.0));
+                ast_expression* f_const = new ast_f_constant(sym_val);
+                f_const->set_type(Float);
+                return f_const;
+            } else if (val == 1.0) {
+                return e2;
+            } else {
+                return this;
+            }
+        }
+    } else if (sym2) {
+        changed = true;
+
+        if (e2->get_type() == Int) {
+            int val = atoi(sym2->c_str());
+
+            if (val == 0) {
+                Symbol sym_val = int_table.add_string(std::to_string(0));
+                ast_expression* i_const = new ast_i_constant(sym_val);
+                i_const->set_type(Int);
+                return i_const;
+            } else if (val == 1) {
+                return e1;
+            } else {
+                return this;
+            }
+        } else {
+            double val = atof(sym2->c_str());
+
+            if (val == 0.0) {
+                Symbol sym_val = float_table.add_string(std::to_string(0.0));
+                ast_expression* f_const = new ast_f_constant(sym_val);
+                f_const->set_type(Float);
+                return f_const;
+            } else if (val == 1.0) {
+                return e1;
+            } else {
+                return this;
+            }
+        }
     } else {
         return this;
     }
@@ -444,6 +558,30 @@ ast_expression* ast_div_expression::local_opt() {
             f_const->set_type(Float);
             return f_const;
         }
+    } else if (sym1) {
+        changed = true;
+
+        if (e1->get_type() == Int) {
+            int val = atoi(sym1->c_str());
+
+            if (val == 0) {
+                Symbol sym_val = int_table.add_string(std::to_string(0));
+                ast_expression* i_const = new ast_i_constant(sym_val);
+                i_const->set_type(Int);
+                return i_const;
+            } else {
+                return this;
+            }
+        } else {
+            my_assert(0,__LINE__, __FILE__);
+            // double val = atof(sym1->c_str());
+
+            // if (val == 0.0) {
+            //     return e2;
+            // } else {
+            //     return this;
+            // }
+        }
     } else {
         return this;
     }
@@ -466,7 +604,7 @@ ast_expression* ast_mod_expression::local_opt() {
             i_const->set_type(Int);
             return i_const;
         } else {
-            my_assert(0,__LINE__, __FILE__)
+            my_assert(0,__LINE__, __FILE__);
             // double val1 = atof(sym1->c_str());
             // double val2 = atof(sym2->c_str());
             // Symbol sym_val = float_table.add_string(std::to_string(val1%val2));
@@ -474,6 +612,30 @@ ast_expression* ast_mod_expression::local_opt() {
             // f_const->set_type(Float);
             // return f_const;
             return this;
+        }
+    } else if (sym1) {
+        changed = true;
+
+        if (e1->get_type() == Int) {
+            int val = atoi(sym1->c_str());
+
+            if (val == 0) {
+                Symbol sym_val = int_table.add_string(std::to_string(0));
+                ast_expression* i_const = new ast_i_constant(sym_val);
+                i_const->set_type(Int);
+                return i_const;
+            } else {
+                return this;
+            }
+        } else {
+            my_assert(0,__LINE__, __FILE__);
+            // double val = atof(sym1->c_str());
+
+            // if (val == 0.0) {
+            //     return e2;
+            // } else {
+            //     return this;
+            // }
         }
     } else {
         return this;
@@ -504,6 +666,46 @@ ast_expression* ast_add_expression::local_opt() {
             f_const->set_type(Float);
             return f_const;
         }
+    } else if (sym1) {
+        changed = true;
+
+        if (e1->get_type() == Int) {
+            int val = atoi(sym1->c_str());
+
+            if (val == 0) {
+                return e2;
+            } else {
+                return this;
+            }
+        } else {
+            double val = atof(sym1->c_str());
+
+            if (val == 0.0) {
+                return e2;
+            } else {
+                return this;
+            }
+        }
+    } else if (sym2) {
+        changed = true;
+
+        if (e2->get_type() == Int) {
+            int val = atoi(sym2->c_str());
+
+            if (val == 0) {
+                return e1;
+            } else {
+                return this;
+            }
+        } else {
+            double val = atof(sym2->c_str());
+
+            if (val == 0.0) {
+                return e1;
+            } else {
+                return this;
+            }
+        }
     } else {
         return this;
     }
@@ -532,6 +734,50 @@ ast_expression* ast_sub_expression::local_opt() {
             ast_expression* f_const = new ast_f_constant(sym_val);
             f_const->set_type(Float);
             return f_const;
+        }
+    }  else if (sym1) {
+        changed = true;
+
+        if (e1->get_type() == Int) {
+            int val = atoi(sym1->c_str());
+
+            if (val == 0) {
+                ast_expression* unary_expr = new ast_unary_expression('-', e2);
+                unary_expr->set_type(Int);
+                return unary_expr;
+            } else {
+                return this;
+            }
+        } else {
+            double val = atof(sym1->c_str());
+
+            if (val == 0.0) {
+                ast_expression* unary_expr = new ast_unary_expression('-', e2);
+                unary_expr->set_type(Float);
+                return unary_expr;
+            } else {
+                return this;
+            }
+        }
+    } else if (sym2) {
+        changed = true;
+
+        if (e2->get_type() == Int) {
+            int val = atoi(sym2->c_str());
+
+            if (val == 0) {
+                return e1;
+            } else {
+                return this;
+            }
+        } else {
+            double val = atof(sym2->c_str());
+
+            if (val == 0.0) {
+                return e1;
+            } else {
+                return this;
+            }
         }
     } else {
         return this;
@@ -1116,6 +1362,20 @@ llvm::Value* ast_postfix_expression::CodeGen(){
     return builder.CreateCall(function, ArgsV, "calltmp");
 }
 
+llvm::Value* ast_shl_expression::CodeGen() {
+    llvm::Value* e1_eval = shift_expr->CodeGen();
+    llvm::Value* e2_eval = add_expr->CodeGen();
+    set_type(Int);
+    return builder.CreateShl(e1_eval, e2_eval);
+}
+
+llvm::Value* ast_shr_expression::CodeGen() {
+    llvm::Value* e1_eval = shift_expr->CodeGen();
+    llvm::Value* e2_eval = add_expr->CodeGen();
+    set_type(Int);
+    return builder.CreateAShr(e1_eval, e2_eval);
+}
+
 llvm::Value* ast_unary_expression::CodeGen(){
     llvm::Value* value = expression->CodeGen();
     set_type(Int);
@@ -1602,6 +1862,38 @@ std::ostream& ast_postfix_expression::print_struct(int d, std::ostream& s) {
     }
 
     set_type(method_type->return_type);
+    return s;
+}
+
+std::ostream& ast_shl_expression::print_struct(int d, std::ostream& s) {
+    pad(d, s) << ".shl_expression" << std::endl;
+    shift_expr->print_struct(d+1, s);
+    add_expr->print_struct(d+1, s);
+
+    if (!is_same_type(shift_expr->get_type(), Int)) {
+        errors.push_back("shift expr must be of type Int");
+    } else if (!is_same_type(add_expr->get_type(), Int)) {
+        errors.push_back("add expr must be of type Int");
+    } else {
+        set_type(Int);
+    }
+
+    return s;
+}
+
+std::ostream& ast_shr_expression::print_struct(int d, std::ostream& s) {
+    pad(d, s) << ".shr_expression" << std::endl;
+    shift_expr->print_struct(d+1, s);
+    add_expr->print_struct(d+1, s);
+
+    if (!is_same_type(shift_expr->get_type(), Int)) {
+        errors.push_back("shift expr must be of type Int");
+    } else if (!is_same_type(add_expr->get_type(), Int)) {
+        errors.push_back("add expr must be of type Int");
+    } else {
+        set_type(Int);
+    }
+
     return s;
 }
 

@@ -23,6 +23,8 @@ class ast_less_expression;
 class ast_leq_expression;
 class ast_assign_expression;
 class ast_postfix_expression;
+class ast_shl_expression;
+class ast_shr_expression;
 typedef std::list<ast_expression*> ast_argument_list;
 class ast_no_expression;
 
@@ -133,6 +135,32 @@ private:
 public:
     ast_postfix_expression(Symbol function_name, ast_argument_list* arguments):
         function_name(function_name), arguments(arguments) {}
+    std::ostream& print_struct(int d, std::ostream& s);
+    llvm::Value* CodeGen();
+    ast_expression* local_opt();
+    Symbol get_const() { return NULL; }
+};
+
+class ast_shl_expression : public ast_expression {
+private:
+    ast_expression* shift_expr;
+    ast_expression* add_expr;
+public:
+    ast_shl_expression(ast_expression* shift_expr,
+        ast_expression* add_expr): shift_expr(shift_expr), add_expr(add_expr){}
+    std::ostream& print_struct(int d, std::ostream& s);
+    llvm::Value* CodeGen();
+    ast_expression* local_opt();
+    Symbol get_const() { return NULL; }
+};
+
+class ast_shr_expression : public ast_expression {
+private:
+    ast_expression* shift_expr;
+    ast_expression* add_expr;
+public:
+    ast_shr_expression(ast_expression* shift_expr,
+        ast_expression* add_expr): shift_expr(shift_expr), add_expr(add_expr){}
     std::ostream& print_struct(int d, std::ostream& s);
     llvm::Value* CodeGen();
     ast_expression* local_opt();

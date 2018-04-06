@@ -49,6 +49,7 @@ ast_program* program;
 %type <unary> unary_operator
 %type <expression> multiplicative_expression
 %type <expression> additive_expression
+%type <expression> shift_expression
 %type <expression> relational_expression
 %type <expression> equality_expression
 %type <expression> assignment_expression
@@ -151,8 +152,17 @@ additive_expression
 	{ $$ = new ast_sub_expression($1, $3); }
 	;
 
-relational_expression
+shift_expression
 	: additive_expression
+	{ $$ = $1; }
+	| shift_expression LEFT_OP additive_expression
+	{ $$ = new ast_shl_expression($1, $3); }
+	| shift_expression RIGHT_OP additive_expression
+	{ $$ = new ast_shr_expression($1, $3); }
+	;
+
+relational_expression
+	: shift_expression
 	{ $$ = $1; }
 	| relational_expression '<' additive_expression
 	{ $$ = new ast_less_expression($1, $3); }
