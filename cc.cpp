@@ -501,6 +501,26 @@ ast_expression* ast_mul_expression::local_opt() {
                 ast_expression* shift_expr = new ast_shl_expression(e2, i_const);
                 shift_expr->set_type(Int);
                 return shift_expr;
+            } else if (is_power2(val+1)) {
+                changed = true;
+                int base = log2(val+1);
+                Symbol sym_val = int_table.add_string(std::to_string(base));
+                ast_expression* i_const = new ast_i_constant(sym_val);
+                i_const->set_type(Int);
+                ast_expression* shift_expr = new ast_shl_expression(e2, i_const);
+                ast_expression* sub_expr = new ast_sub_expression(shift_expr, e2);
+                sub_expr->set_type(Int);
+                return sub_expr;
+            } else if (is_power2(val-1)) {
+                changed = true;
+                int base = log2(val-1);
+                Symbol sym_val = int_table.add_string(std::to_string(base));
+                ast_expression* i_const = new ast_i_constant(sym_val);
+                i_const->set_type(Int);
+                ast_expression* shift_expr = new ast_shl_expression(e2, i_const);
+                ast_expression* add_expr = new ast_add_expression(shift_expr, e2);
+                add_expr->set_type(Int);
+                return add_expr;
             } else {
                 return this;
             }
@@ -533,15 +553,26 @@ ast_expression* ast_mul_expression::local_opt() {
             } else if (val == 1) {
                 changed = true;
                 return e1;
-            } else if (is_power2(val)) {
+            } else if (is_power2(val+1)) {
                 changed = true;
-                int base = log2(val);
+                int base = log2(val+1);
                 Symbol sym_val = int_table.add_string(std::to_string(base));
                 ast_expression* i_const = new ast_i_constant(sym_val);
                 i_const->set_type(Int);
                 ast_expression* shift_expr = new ast_shl_expression(e1, i_const);
-                shift_expr->set_type(Int);
-                return shift_expr;
+                ast_expression* sub_expr = new ast_sub_expression(shift_expr, e1);
+                sub_expr->set_type(Int);
+                return sub_expr;
+            } else if (is_power2(val-1)) {
+                changed = true;
+                int base = log2(val-1);
+                Symbol sym_val = int_table.add_string(std::to_string(base));
+                ast_expression* i_const = new ast_i_constant(sym_val);
+                i_const->set_type(Int);
+                ast_expression* shift_expr = new ast_shl_expression(e1, i_const);
+                ast_expression* add_expr = new ast_add_expression(shift_expr, e1);
+                add_expr->set_type(Int);
+                return add_expr;
             } else {
                 return this;
             }
@@ -1385,14 +1416,14 @@ llvm::Value* ast_shl_expression::CodeGen() {
     llvm::Value* e1_eval = shift_expr->CodeGen();
     llvm::Value* e2_eval = add_expr->CodeGen();
     set_type(Int);
-    return builder.CreateShl(e1_eval, e2_eval);
+    return builder.CreateShl(e1_eval, e2_eval, "shl");
 }
 
 llvm::Value* ast_shr_expression::CodeGen() {
     llvm::Value* e1_eval = shift_expr->CodeGen();
     llvm::Value* e2_eval = add_expr->CodeGen();
     set_type(Int);
-    return builder.CreateAShr(e1_eval, e2_eval);
+    return builder.CreateAShr(e1_eval, e2_eval, "shr");
 }
 
 llvm::Value* ast_unary_expression::CodeGen(){
@@ -1402,12 +1433,12 @@ llvm::Value* ast_unary_expression::CodeGen(){
         return NULL;
    
     if(unary=='-')
-        return builder.CreateNeg(value);
+        return builder.CreateNeg(value, "negtmp");
     else if(unary=='~')
-        return builder.CreateNot(value);
+        return builder.CreateNot(value, "compltmp");
     else if(unary=='!')
         return builder.CreateICmpEQ(value, llvm::ConstantInt::get(llvm_context, 
-            llvm::APInt(32, 0, true)));
+            llvm::APInt(32, 0, true)), "nottmp");
     else
         return NULL;
 }
