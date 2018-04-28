@@ -1,0 +1,67 @@
+Idea: 
+    To include optimization in our compiler we make multiple pass over the AST
+checking each time for the possible Optimizations. The idea behind doing multiple 
+pass over AST is to accommodate the cascading effect of optimization. In a optimi-
+zation pass over the AST we maintain a global boolean variable named "changed"
+which we set to true in case there is optimization. At the end of each pass we
+decide to do next pass on the basis of variable "changed".
+
+NOTE: All optimizations included are local to individual Basic Block.
+
+
+Optimizations included:
+
+1. Constant folding:
+    Idea: For Constant folding we first check if both the operands involved in the
+    binary operator are constants or not. If they are constants we extract the 
+    constants and apply the binary operation during compile time and modify the 
+    AST accordingly.
+
+    Examples:
+        1. 1+2+x --> 3+x
+
+2. Constant propagation:
+    Idea: For each basic block we maintain a table to keep the identifier-constant
+    mapping. This table will be created during entry to the basic block and will be
+    updated at each assignment statement within the basic block. Finally while
+    branching out of the basic block, we clear the entries in the mapping.
+
+3. Algebraic simplification:
+    Idea: To identify the possibilities for Algebraic simplification at Algebraic
+    binary operation node of AST we check for whether any operands is special a
+    special value like 0 or 1. On finding this we create a new AST node consisting
+    of appropriate optimization and replace the original AST node by newly created
+    AST node.
+
+    Examples:
+        1. x+0 --> x
+        2. x*0 --> 0
+        3. x*1 --> x
+        4. x/1 --> x
+        5. x-0 --> x
+        6. 0-x --> -x
+
+4. Strength Reduction:
+    Idea: To identify the possibilities for Strength at Algebraic
+    binary operation node of AST we check for whether any operands is a power of
+    2 or close to power of 2 or not. On finding such operands we take create a
+    optimized AST node considering optimizations shown in examples below. We then 
+    replace the old AST node with the new AST node.
+
+    Examples:
+        1. x*8 --> x<<3
+        2. 8*x --> x<<3
+        3. x%8 --> x & 7 where '&' is the bitwise and operator
+        4. x = x*15 --> t:= x<<4; x = t-x
+        5. - x = x*17 --> t:= x<<4; x = t+x
+
+
+5. Dead code elimination
+    Idea: To achieve dead code elimination we use our optimization tools like 
+    constant folding and constant propagation to identify the branch condition
+    during compile time. In case we evaluate during compile time that the branch
+    condition is always false we skip generating code for the unreachable section.
+    Examples:
+        1. if(0){ ... } will be removed
+        2. for(;0;){...} will also be removed
+
