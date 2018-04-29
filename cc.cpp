@@ -1135,13 +1135,13 @@ void InitializeModuleAndPassManager() {
     // Promote allocas to registers.
     fpm->add(llvm::createPromoteMemoryToRegisterPass());
     // Do simple "peephole" optimizations and bit-twiddling optzns.
-    // fpm->add(llvm::createInstructionCombiningPass());
+    fpm->add(llvm::createInstructionCombiningPass());
     // Reassociate expressions.
-    // fpm->add(llvm::createReassociatePass());
+    fpm->add(llvm::createReassociatePass());
     // Eliminate Common SubExpressions.
     // fpm->add(llvm::createGVNPass());
     // Simplify the control flow graph (deleting unreachable blocks, etc).
-    // fpm->add(llvm::createCFGSimplificationPass());
+    fpm->add(llvm::createCFGSimplificationPass());
 
     fpm->doInitialization();
 }
