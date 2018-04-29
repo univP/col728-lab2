@@ -1,6 +1,8 @@
 {
     "cSpell.words": [
+        "bitcode",
         "cgen",
+        "gcse",
         "semant",
         "yylval"
     ],
@@ -43,6 +45,7 @@
         "utility": "cpp",
         "cinttypes": "cpp",
         "string_view": "cpp",
-        "algorithm": "cpp"
+        "algorithm": "cpp",
+        "*.ipp": "cpp"
     }
 }

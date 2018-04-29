@@ -1125,25 +1125,25 @@ llvm::AllocaInst* CreateEntryBlockAlloca(llvm::Type* type,
 }
 
 void InitializeModuleAndPassManager() {
-  // Open a new module.
+    // Open a new module.
     module = llvm::make_unique<llvm::Module>("col728 lab2",
             llvm_context);
 
-    // // Create a new pass manager attached to it.
-    // fpm = llvm::make_unique<llvm::legacy::FunctionPassManager>(module.get());
+    // Create a new pass manager attached to it.
+    fpm = llvm::make_unique<llvm::legacy::FunctionPassManager>(module.get());
 
-    // // Promote allocas to registers.
-    // fpm->add(llvm::createPromoteMemoryToRegisterPass());
-    // // Do simple "peephole" optimizations and bit-twiddling optzns.
+    // Promote allocas to registers.
+    fpm->add(llvm::createPromoteMemoryToRegisterPass());
+    // Do simple "peephole" optimizations and bit-twiddling optzns.
     // fpm->add(llvm::createInstructionCombiningPass());
-    // // Reassociate expressions.
+    // Reassociate expressions.
     // fpm->add(llvm::createReassociatePass());
-    // // Eliminate Common SubExpressions.
+    // Eliminate Common SubExpressions.
     // fpm->add(llvm::createGVNPass());
-    // // Simplify the control flow graph (deleting unreachable blocks, etc).
+    // Simplify the control flow graph (deleting unreachable blocks, etc).
     // fpm->add(llvm::createCFGSimplificationPass());
 
-    // fpm->doInitialization();
+    fpm->doInitialization();
 }
 
 // Code generation function defined in appropriate AST nodes.
@@ -1160,6 +1160,10 @@ void ast_program::CodeGen() {
     }
     
     module->print(llvm::errs(), nullptr);
+    std::error_code EC;
+    llvm::raw_fd_ostream OS("bitcode.bc", EC, llvm::sys::fs::F_None);
+    llvm::WriteBitcodeToFile(module.get(), OS);
+    OS.flush();
     named_types.exit_scope();
     named_values.exit_scope();
 }
@@ -1432,7 +1436,7 @@ llvm::Function* ast_function_definition::CodeGen() {
     }
 
     llvm::verifyFunction(*function);
-    // fpm->run(*function);
+    fpm->run(*function);
 
     named_values.exit_scope();
     named_types.exit_scope();
@@ -1470,7 +1474,7 @@ llvm::Value* ast_postfix_expression::CodeGen(){
         ArgsV.push_back((*ait)->CodeGen());
     }
     
-    return builder.CreateCall(function, ArgsV, "calltmp");
+    return builder.CreateCall(function, ArgsV);
 }
 
 llvm::Value* ast_shl_expression::CodeGen() {
@@ -1677,7 +1681,7 @@ void ast_mif_statement::CodeGen(){
         my_assert(0, __LINE__, __FILE__);
     
     cond_val = builder.CreateICmpNE(cond_val, llvm::ConstantInt::get(llvm_context, 
-        llvm::APInt(32, 0, true)), "mifcond");
+        llvm::APInt(1, 0, true)), "mifcond");
     
     llvm::Function* function = builder.GetInsertBlock()->getParent();
     llvm::BasicBlock* then_block = llvm::BasicBlock::Create(llvm_context,

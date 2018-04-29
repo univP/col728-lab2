@@ -36,6 +36,7 @@
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
+#include "llvm/Bitcode/BitcodeWriter.h"
 
 #define my_assert(e,l,f) if (!(e)) { std::cerr << "Line: "<< l << ", File: " << f << std::endl; exit(1); }
 
