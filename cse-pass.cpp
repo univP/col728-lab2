@@ -12,17 +12,18 @@
 #include <set>
 #include <list>
 #include <algorithm>
+#include <vector>
 
 using namespace llvm;
 
 // TODO:
 // 1. implement the dataflow analysis algorithm
-//  a. data: (register, expression)
+//  a. data: set of exprs
 //  b. direction: forward
 //  c. meet: intersection
-//  d. transfer: add (lhs, rhs) to set
+//  d. transfer: add expr to set
 //  e. boundary: out[entry] = {}
-//  f. internal: empty
+//  f. internal: all expressions
 
 namespace {
 
@@ -33,12 +34,20 @@ namespace {
 
         // Input and Output of each basic block mapped to a set of instructions 
         // only binary operators are considered
-        typedef std::set<BinaryOperator*> InstSet;
+        typedef std::set<Instruction*> InstSet;
         typedef std::map<BasicBlock*, InstSet*> InstSetMap;
         InstSetMap inSetMap, outSetMap;
         std::list<BasicBlock*> workQueue;
 
         CsePass() : FunctionPass(ID) {}
+
+        bool isValid(Instruction* inst) {
+            unsigned opcode = inst->getOpcode();
+            return opcode == Instruction::Add || opcode == Instruction::Sub
+                || opcode == Instruction::Mul || opcode == Instruction::SDiv
+                || opcode == Instruction::SRem || opcode == Instruction::Xor
+                || opcode == Instruction::ICmp;
+        }
 
         // Step1: Compute the available instructions at each basic block
         void availInstSet(Function& func) {
@@ -47,14 +56,31 @@ namespace {
             outSetMap.clear();
             workQueue.clear();
 
+            InstSet allInst;
+
             for (Function::iterator fb = func.begin(), fe = func.end(); fb != fe; fb++) {
-                // Initialize with empty sets
-                inSetMap[&*fb] = new InstSet();
-                outSetMap[&*fb] = new InstSet();
+                BasicBlock& basicBlock = *fb;
+
+                for (BasicBlock::iterator ib = basicBlock.begin(), ie = basicBlock.end(); ib != ie; ib++) {
+                    Instruction* inst = &*ib;
+
+                    if (isValid(inst)) {
+                        allInst.insert(inst);
+                    }
+                }
+            }
+
+            for (Function::iterator fb = func.begin(), fe = func.end(); fb != fe; fb++) {
+                // Initialize with all instructions
+                inSetMap[&*fb] = new InstSet(allInst);
+                outSetMap[&*fb] = new InstSet(allInst);
 
                 // Add all basic blocks to work queue
                 workQueue.push_back(&*fb);
             }
+
+            // No instruction on entry
+            inSetMap[&func.getEntryBlock()]->clear();
 
             // Breadth first traversal
             while (!workQueue.empty()) {
@@ -79,7 +105,9 @@ namespace {
 
                 for (BasicBlock::iterator ib = frontBlock->begin(), ie = frontBlock->end(); ib != ie; ib++) {
                     // Only add binary operators
-                    if (BinaryOperator* inst = dyn_cast<BinaryOperator>(&*ib)) {
+                    Instruction* inst = &*ib;
+                    
+                    if (isValid(inst)) {
                         newSet.insert(inst);
                     }
                 }
@@ -103,17 +131,25 @@ namespace {
             for (Function::iterator fb = func.begin(), fe = func.end(); fb != fe; fb++) {
                 InstSet newSet(*inSetMap[&*fb]);
 
+                // Store iterator and value in a vector and replace them later
+                // Cannot modify while iterating the loop
+                std::vector<BasicBlock::iterator> iterList;
+                std::vector<Value*> valueList;
+
                 // newSet represents the input set at program point
                 for (BasicBlock::iterator ib = (*fb).begin(), ie = (*fb).end(); ib != ie; ib++) {
                     // Only process binary operators
-                    if (BinaryOperator* inst = dyn_cast<BinaryOperator>(&*ib)) {
+                    Instruction* inst = &*ib;
+                    
+                    if (isValid(inst)) {
                         // Look up current expression
-                        for (BinaryOperator* bop : newSet) {
+                        for (Instruction* bop : newSet) {
                             if (inst->getOpcode() == bop->getOpcode() 
                                 && inst->getOperand(0) == bop->getOperand(0) 
                                 && inst->getOperand(1) == bop->getOperand(1)) {
-                                    // Replace instruction
-                                    ReplaceInstWithValue(inst->getParent()->getInstList(), ib, bop);
+                                    // Add required info to vectors
+                                    iterList.push_back(ib);
+                                    valueList.push_back(bop);
                                     changed = true;
                                     break;
                             }
@@ -122,6 +158,14 @@ namespace {
                         // Add current instruction to available expressions
                         newSet.insert(inst);
                     }
+                }
+
+                // Replace instructions
+                for (unsigned index = 0; index < iterList.size(); index++) {
+                    BasicBlock::iterator ib = iterList[index];
+                    Instruction* inst = &*ib;
+                    Value* bop = valueList[index];
+                    ReplaceInstWithValue(inst->getParent()->getInstList(), ib, bop);
                 }
             }
 
